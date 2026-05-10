@@ -8,6 +8,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.rng.core.RandomProviderDefaultState;
 
@@ -55,6 +60,10 @@ import search.mcts.MCTS;
  *   --drawish-threshold <float>  Skip game if dominant outcome >= this (default: 0.9).
  *   --opening-max-depth <int>    Cap for opening enumeration (default: 8).
  *   --seed <long>                Base RNG seed (default: 42).
+ *   --threads <int>              Worker threads, one game per task
+ *                                (default: available processors).
+ *   --verbose                    Print per-game / per-trial logs above the
+ *                                progress bar (default: bar only).
  *   --manifest <file>            File with one .lud path per line.
  *   [trailing positional args]   Additional .lud paths.
  */
@@ -73,6 +82,8 @@ public class GenerateDataset
         double drawishThreshold = 0.9;
         int openingMaxDepth = 8;
         long baseSeed = 42L;
+        int threads = Runtime.getRuntime().availableProcessors();
+        boolean verbose = false;
         String manifestPath = null;
         final List<String> ludPaths = new ArrayList<>();
 
@@ -91,6 +102,8 @@ public class GenerateDataset
                 case "--drawish-threshold":    drawishThreshold  = Double.parseDouble(args[++i]); break;
                 case "--opening-max-depth":    openingMaxDepth   = Integer.parseInt(args[++i]); break;
                 case "--seed":                 baseSeed          = Long.parseLong(args[++i]); break;
+                case "--threads":              threads           = Integer.parseInt(args[++i]); break;
+                case "--verbose":              verbose           = true; break;
                 case "--manifest":             manifestPath      = args[++i]; break;
                 default:                       ludPaths.add(args[i]);
             }
@@ -120,23 +133,69 @@ public class GenerateDataset
         ensureParent(new File(failuresFile));
 
         final double thinkSeconds = (maxSeconds > 0) ? maxSeconds : Double.MAX_VALUE;
+        final int workerCount = Math.max(1, Math.min(threads, ludPaths.size()));
+        final String fOutDir = outDir;
+
+        final ProgressBar bar = new ProgressBar(ludPaths.size(), verbose);
+        bar.render();
 
         // Append to the failures log so re-runs can extend it; the Python
         // wrapper truncates it up front when it wants a clean run.
         try (PrintWriter failuresOut = new PrintWriter(new FileWriter(failuresFile, true)))
         {
+            final ExecutorService pool = Executors.newFixedThreadPool(workerCount);
+            final List<Future<?>> futures = new ArrayList<>(ludPaths.size());
+
+            final int fNumGames = numGames;
+            final int fNumPlayouts = numPlayouts;
+            final int fMoveLimit = moveLimit;
+            final double fMaxGameSeconds = maxGameSeconds;
+            final int fDrawishCheckAfter = drawishCheckAfter;
+            final double fDrawishThreshold = drawishThreshold;
+            final int fOpeningMaxDepth = openingMaxDepth;
+            final long fBaseSeed = baseSeed;
+
             for (final String ludPath : ludPaths)
-                processGame(ludPath, outDir, failuresOut,
-                    numGames, numPlayouts, thinkSeconds, moveLimit,
-                    maxGameSeconds, drawishCheckAfter, drawishThreshold,
-                    openingMaxDepth, baseSeed);
+            {
+                futures.add(pool.submit(() ->
+                {
+                    final StringBuilder log = new StringBuilder();
+                    try
+                    {
+                        processGame(ludPath, fOutDir, failuresOut, log,
+                            fNumGames, fNumPlayouts, thinkSeconds, fMoveLimit,
+                            fMaxGameSeconds, fDrawishCheckAfter, fDrawishThreshold,
+                            fOpeningMaxDepth, fBaseSeed);
+                    }
+                    catch (final Throwable t)
+                    {
+                        log.append("[error] ").append(ludPath).append(": ")
+                            .append(t).append('\n');
+                        logFailure(failuresOut, ludPath, "task_crash", oneLine(t.toString()));
+                    }
+                    finally
+                    {
+                        bar.printAboveAndTick(log.toString());
+                    }
+                }));
+            }
+
+            pool.shutdown();
+            for (final Future<?> f : futures)
+            {
+                try { f.get(); }
+                catch (final Exception e) { /* logged inside task */ }
+            }
+            pool.awaitTermination(1, TimeUnit.DAYS);
         }
+        bar.finish();
     }
 
     private static void processGame(
         final String ludPath,
         final String outDir,
         final PrintWriter failuresOut,
+        final StringBuilder log,
         final int numGames,
         final int numPlayouts,
         final double thinkSeconds,
@@ -176,18 +235,19 @@ public class GenerateDataset
         if (!MCTS.createUCT().supportsGame(game))
         {
             logFailure(failuresOut, ludPath, "uct_unsupported", "");
-            System.out.println("[skip] " + gameId + ": UCT unsupported");
+            log.append("[skip] ").append(gameId).append(": UCT unsupported\n");
             return;
         }
 
-        System.out.println("=== " + gameId + " (" + numPlayers + " players) ===");
+        log.append("=== ").append(gameId).append(" (")
+            .append(numPlayers).append(" players) ===\n");
         final byte[] startRng = freshRngState(game, baseSeed ^ gameId.hashCode());
 
         final List<int[]> openings;
         try
         {
             openings = OpeningGenerator.generate(
-                game, startRng, numGames, openingMaxDepth, baseSeed);
+                game, startRng, numGames, openingMaxDepth, baseSeed, log);
         }
         catch (final Throwable t)
         {
@@ -198,8 +258,9 @@ public class GenerateDataset
         {
             logFailure(failuresOut, ludPath, "insufficient_openings",
                 "got=" + openings.size() + " want=" + numGames);
-            System.out.println("[skip] " + gameId + ": only "
-                + openings.size() + "/" + numGames + " unique openings");
+            log.append("[skip] ").append(gameId).append(": only ")
+                .append(openings.size()).append('/').append(numGames)
+                .append(" unique openings\n");
             return;
         }
 
@@ -279,8 +340,8 @@ public class GenerateDataset
                 logFailure(failuresOut, ludPath, "too_slow",
                     String.format("first_trial_seconds=%.3f limit=%.3f",
                         elapsed, maxGameSeconds));
-                System.out.println("[skip] " + gameId
-                    + String.format(": first trial took %.3fs (> %.3f)",
+                log.append("[skip] ").append(gameId).append(
+                    String.format(": first trial took %.3fs (> %.3f)%n",
                         elapsed, maxGameSeconds));
                 return;
             }
@@ -293,8 +354,8 @@ public class GenerateDataset
                 ludFile, startRng, opening.length,
                 Arrays.copyOf(moves, moveCount), trial, statusStr));
 
-            System.out.println(String.format(
-                "  trial_%d  opening_plies=%d  moves=%d  status=%s  (%.3fs)",
+            log.append(String.format(
+                "  trial_%d  opening_plies=%d  moves=%d  status=%s  (%.3fs)%n",
                 g, opening.length, moveCount, statusStr, elapsed));
 
             // Drawish check after the configured number of trials.
@@ -317,8 +378,8 @@ public class GenerateDataset
                     logFailure(failuresOut, ludPath, "too_drawish",
                         String.format("dominant=%.3f outcome=%s after=%d",
                             frac, oneLine(dominantKey), played));
-                    System.out.println("[skip] " + gameId
-                        + String.format(": %.0f%% same outcome after %d trials",
+                    log.append("[skip] ").append(gameId).append(
+                        String.format(": %.0f%% same outcome after %d trials%n",
                             frac * 100, played));
                     return;
                 }
@@ -340,11 +401,13 @@ public class GenerateDataset
         catch (final Exception e)
         {
             logFailure(failuresOut, ludPath, "write_error", oneLine(e.toString()));
-            System.err.println("[skip] " + gameId + ": write failed: " + e);
+            log.append("[skip] ").append(gameId).append(": write failed: ")
+                .append(e).append('\n');
             return;
         }
-        System.out.println("[ok]   " + gameId + ": "
-            + pendingRecords.size() + " trials -> " + trialsFile);
+        log.append("[ok]   ").append(gameId).append(": ")
+            .append(pendingRecords.size()).append(" trials -> ")
+            .append(trialsFile).append('\n');
     }
 
     // --------------------------------------------------------- record I/O
@@ -440,5 +503,94 @@ public class GenerateDataset
     private static String oneLine(final String s)
     {
         return s == null ? "" : s.replace('\n', ' ').replace('\t', ' ');
+    }
+
+    // ------------------------------------------------------- progress bar
+
+    private static final class ProgressBar
+    {
+        private static final int BAR_WIDTH = 30;
+
+        private final int total;
+        private final boolean verbose;
+        private final long startNanos;
+        private final AtomicInteger done = new AtomicInteger();
+        private int lastLineLen = 0;
+
+        ProgressBar(final int total, final boolean verbose)
+        {
+            this.total = total;
+            this.verbose = verbose;
+            this.startNanos = System.nanoTime();
+        }
+
+        synchronized void printAboveAndTick(final String text)
+        {
+            if (verbose && text != null && !text.isEmpty())
+            {
+                clearLine();
+                System.out.print(text);
+                if (text.charAt(text.length() - 1) != '\n') System.out.println();
+            }
+            done.incrementAndGet();
+            render();
+        }
+
+        synchronized void render()
+        {
+            final int d = done.get();
+            final double elapsed = (System.nanoTime() - startNanos) / 1e9;
+            final double rate = elapsed > 0 ? d / elapsed : 0.0;
+            final double eta = (rate > 0 && d < total) ? (total - d) / rate : 0.0;
+            final int filled = total == 0 ? BAR_WIDTH
+                : (int) Math.floor(BAR_WIDTH * (double) d / total);
+            final StringBuilder bar = new StringBuilder(BAR_WIDTH + 2);
+            bar.append('[');
+            for (int i = 0; i < BAR_WIDTH; i++)
+            {
+                if (i < filled) bar.append('=');
+                else if (i == filled && d < total) bar.append('>');
+                else bar.append(' ');
+            }
+            bar.append(']');
+            final String line = String.format(
+                "%d/%d %s %3.0f%% elapsed=%s eta=%s rate=%.2f/s",
+                d, total, bar,
+                total == 0 ? 100.0 : 100.0 * d / total,
+                fmtSeconds(elapsed), fmtSeconds(eta), rate);
+            System.out.print('\r');
+            System.out.print(line);
+            for (int i = line.length(); i < lastLineLen; i++) System.out.print(' ');
+            System.out.print('\r');
+            System.out.print(line);
+            lastLineLen = line.length();
+            System.out.flush();
+        }
+
+        synchronized void finish()
+        {
+            render();
+            System.out.println();
+        }
+
+        private void clearLine()
+        {
+            if (lastLineLen == 0) return;
+            System.out.print('\r');
+            for (int i = 0; i < lastLineLen; i++) System.out.print(' ');
+            System.out.print('\r');
+            lastLineLen = 0;
+        }
+
+        private static String fmtSeconds(final double s)
+        {
+            if (Double.isNaN(s) || Double.isInfinite(s)) return "--:--";
+            final long total = (long) s;
+            final long hh = total / 3600;
+            final long mm = (total % 3600) / 60;
+            final long ss = total % 60;
+            if (hh > 0) return String.format("%d:%02d:%02d", hh, mm, ss);
+            return String.format("%02d:%02d", mm, ss);
+        }
     }
 }

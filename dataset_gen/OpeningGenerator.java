@@ -34,7 +34,8 @@ public final class OpeningGenerator
         final byte[] startRngState,
         final int count,
         final int maxDepth,
-        final long randomSeed)
+        final long randomSeed,
+        final StringBuilder log)
     {
         if (count <= 1)
         {
@@ -88,10 +89,11 @@ public final class OpeningGenerator
                     break; // depth has stalled, grow it
             }
 
-            System.out.println("  [openings] depth=" + depth
-                + " samples=" + samples
-                + " new=" + newAtDepth
-                + " total=" + uniqueByHash.size() + "/" + count);
+            log.append("  [openings] depth=").append(depth)
+                .append(" samples=").append(samples)
+                .append(" new=").append(newAtDepth)
+                .append(" total=").append(uniqueByHash.size())
+                .append('/').append(count).append('\n');
 
             if (uniqueByHash.size() >= count)
             {
@@ -100,8 +102,9 @@ public final class OpeningGenerator
             }
         }
 
-        System.out.println("  [openings] hit maxDepth=" + maxDepth
-            + " with " + uniqueByHash.size() + "/" + count + " unique");
+        log.append("  [openings] hit maxDepth=").append(maxDepth)
+            .append(" with ").append(uniqueByHash.size())
+            .append('/').append(count).append(" unique\n");
         return new ArrayList<>(uniqueByHash.values());
     }
 

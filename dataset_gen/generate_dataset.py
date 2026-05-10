@@ -204,6 +204,12 @@ def main() -> int:
                          "positions, but never beyond this.")
     ap.add_argument("--seed", type=int, default=42,
                     help="Base RNG seed for opening enumeration.")
+    ap.add_argument("--threads", type=int, default=None,
+                    help="Worker threads on the Java side (one game per "
+                         "task). Defaults to the JVM's available processors.")
+    ap.add_argument("--verbose", action="store_true",
+                    help="Print per-game / per-trial logs above the progress "
+                         "bar (default: bar only).")
     ap.add_argument("--append", action="store_true",
                     help="Keep existing --out-file / --failures-file and "
                          "append to them (default: truncate first).")
@@ -270,6 +276,10 @@ def main() -> int:
             "--seed", str(args.seed),
             "--manifest", manifest_path,
         ]
+        if args.threads is not None:
+            cmd += ["--threads", str(args.threads)]
+        if args.verbose:
+            cmd += ["--verbose"]
         print("[run]", " ".join(cmd))
         return subprocess.call(cmd)
     finally:
