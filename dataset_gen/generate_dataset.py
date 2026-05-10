@@ -92,14 +92,16 @@ def compile_java(out_class_dir: pathlib.Path, ludii_root: pathlib.Path) -> None:
     have produced.
     """
     out_class_dir.mkdir(parents=True, exist_ok=True)
-    launcher_src = HERE / "GenerateDataset.java"
+    own_sources = sorted(str(p) for p in HERE.glob("*.java"))
     sentinel = out_class_dir / ".compiled_ok"
-    if sentinel.exists() and sentinel.stat().st_mtime >= launcher_src.stat().st_mtime:
+    if sentinel.exists() and all(
+        sentinel.stat().st_mtime >= os.path.getmtime(s) for s in own_sources
+    ):
         return
 
     java_release = _detect_java_release()
     classpath = os.pathsep.join(str(ludii_root / j) for j in LUDII_LIB_JARS)
-    sources = _collect_java_sources(ludii_root) + [str(launcher_src)]
+    sources = _collect_java_sources(ludii_root) + own_sources
     print(f"[compile] {len(sources)} .java files (release {java_release}) "
           f"-> {out_class_dir}")
 
@@ -181,6 +183,12 @@ def main() -> int:
                          "Negative = no cap (iterations only).")
     ap.add_argument("--move-limit", type=int, default=1000,
                     help="Max moves per trial before forced draw.")
+    ap.add_argument("--opening-max-depth", type=int, default=8,
+                    help="Cap on opening depth: random sampler grows the "
+                         "opening length until it has enough unique start "
+                         "positions, but never beyond this.")
+    ap.add_argument("--seed", type=int, default=42,
+                    help="Base RNG seed for opening enumeration.")
     ap.add_argument("--source", action="append", type=pathlib.Path, default=None,
                     help="Override source dir/file (repeatable). "
                          "Defaults to the two configured directories.")
@@ -226,6 +234,8 @@ def main() -> int:
             "--num-playouts", str(args.num_playouts),
             "--max-seconds", str(args.max_seconds),
             "--move-limit", str(args.move_limit),
+            "--opening-max-depth", str(args.opening_max_depth),
+            "--seed", str(args.seed),
             "--manifest", manifest_path,
         ]
         print("[run]", " ".join(cmd))
