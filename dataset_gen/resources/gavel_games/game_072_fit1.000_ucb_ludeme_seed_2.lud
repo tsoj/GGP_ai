@@ -1,0 +1,33 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (rectangle 5 5 diagonals:Alternating))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Step
+          (to if: (is Empty (to)))
+          (then
+            (and
+              (if (is Line 4) (moveAgain))
+              (if (no Moves Next) (and (moveAgain) (addScore Mover 1)))
+            )
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (meta (swap))
+    (play (move Add (to (sites Empty))))
+    (end
+      {
+        (if (is Line 4) (result Mover Win))
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)

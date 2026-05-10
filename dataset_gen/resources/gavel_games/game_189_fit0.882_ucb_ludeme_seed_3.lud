@@ -1,0 +1,37 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (rectangle 5 5 diagonals:Alternating))
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (start
+      {
+        (place
+          "PIECE_ALPHA1"
+          (intersection
+            (sites Phase 0)
+            (expand (sites Centre) steps:2 Orthogonal)
+          )
+        )
+        (place
+          "PIECE_ALPHA2"
+          (intersection
+            (sites Phase 1)
+            (expand (sites Centre) steps:2 Orthogonal)
+          )
+        )
+      }
+    )
+    (play (move Add (to (sites Empty))))
+    (end
+      {
+        (if (no Moves Next) (result Mover Win))
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)

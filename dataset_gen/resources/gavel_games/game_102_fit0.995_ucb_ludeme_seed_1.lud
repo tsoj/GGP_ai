@@ -1,0 +1,28 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 8))
+      (piece "PIECE_ALPHA" Each)
+      (regions P1 {(sites Top) (sites Bottom)})
+      (regions P2 {(sites Left) (sites Right)})
+    }
+  )
+  (rules
+    (play
+      (move
+        Add
+        (to
+          (sites Empty)
+          if:
+          (or
+            (no Pieces Mover in: (sites Around (to) Adjacent))
+            (= 1 (count Sites in: (sites Around (to) Own Adjacent)))
+          )
+        )
+      )
+    )
+    (end (if (no Moves Next) (result Next Loss)))
+  )
+)

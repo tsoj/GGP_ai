@@ -1,0 +1,52 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (merge
+          (shift 0 (/ (- 9 3) 2) (rectangle 3 9 diagonals:Solid))
+          (shift (/ (- 9 3) 2) 0 (rectangle 9 3 diagonals:Solid))
+        )
+        use:Vertex
+      )
+      (piece
+        "PIECE_ALPHA"
+        P1
+        (or
+          (move
+            Hop
+            (between if: (is Enemy (who at: (between))) (apply (remove (between))))
+            (to if: (is Empty (to)))
+          )
+          (move Step (to if: (is Empty (to))))
+        )
+      )
+      (piece
+        "PIECE_BETA"
+        P2
+        N
+        (move
+          Step
+          (directions {Rightward Forwards Leftward})
+          (to if: (is Empty (to)))
+        )
+      )
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (sites {"E7" "I7"}))
+        (place "PIECE_BETA2" (sites {"A3" "C3" "E3" "G3" "I3"}))
+      }
+    )
+    (play (forEach Piece))
+    (end
+      {
+        (if (no Moves P1) (result P2 Win))
+        (if (no Pieces P2) (result P1 Win))
+      }
+    )
+  )
+)

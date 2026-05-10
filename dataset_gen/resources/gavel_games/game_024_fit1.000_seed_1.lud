@@ -1,0 +1,67 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 9) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play
+      (or
+        (move
+          Select
+          (from (union (sites Empty) (sites Hidden to:Mover)))
+          (then
+            (priority
+              {
+                (if
+                  (not (is In (last To) (sites Empty)))
+                  (and
+                    {
+                      (note player:Mover "made an illegal move")
+                      (note player:Mover "to play")
+                      (moveAgain)
+                    }
+                  )
+                )
+                (do
+                  (add
+                    (to (last To))
+                    (then
+                      (and
+                        {
+                          (enclose
+                            (from (last To))
+                            Orthogonal
+                            (between
+                              if:
+                              (is Enemy (who at: (between)))
+                              (apply (and (remove (between)) (remove (between))))
+                            )
+                          )
+                          (set Hidden at: (last To) to:Next)
+                          (note player:Mover "has moved")
+                          (note player:Next "to play")
+                        }
+                      )
+                    )
+                  )
+                  ifAfterwards:
+                  (> (count Liberties Orthogonal) 0)
+                )
+                (and
+                  {
+                    (note player:Mover "made an illegal move")
+                    (note player:Mover "to play")
+                    (moveAgain)
+                  }
+                )
+              }
+            )
+          )
+        )
+        (move Pass)
+      )
+    )
+    (end (if (is Line 5 All exact:True) (result Mover Win)))
+  )
+)

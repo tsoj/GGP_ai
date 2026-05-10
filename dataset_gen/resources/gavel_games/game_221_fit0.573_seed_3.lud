@@ -1,0 +1,42 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (rotate
+          45
+          (merge
+            {
+              (rectangle 5 1)
+              (shift -1 1 (rectangle 3 6))
+              (shift -2 2 (rectangle 1 8))
+              (shift 1 -1 (rectangle 7 2))
+            }
+          )
+        )
+        use:Vertex
+      )
+      (piece "PIECE_ALPHA" P1 N)
+      (piece "PIECE_ALPHA" P2 S)
+      (piece "PIECE_BETA" Each)
+      (regions P1 (sites Bottom))
+      (regions P2 (sites Top))
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      (if
+        (or
+          {
+            (is Loop)
+            (is Connected 3 SidesNoCorners)
+            (is Connected 4 Sides)
+          }
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

@@ -1,0 +1,27 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (intersect {(hex 7) (shift -5.2 0 (hex Rectangle 7 14))})
+      )
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (play
+      (do
+        (move Add (to (sites Empty)))
+        ifAfterwards:
+        (<=
+          (max
+            (results from: (sites Occupied by:Mover) to:1 (* 1 (size Group at: (from))))
+          )
+          (count Groups if: (= (who at: (to)) (mover)))
+        )
+      )
+    )
+    (end (if (no Moves Next) (result Next Loss)))
+  )
+)

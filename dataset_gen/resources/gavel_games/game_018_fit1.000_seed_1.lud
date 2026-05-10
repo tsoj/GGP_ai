@@ -1,0 +1,30 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (hex 8)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (do
+            (set Var (last To))
+            next:
+            (enclose
+              (from (last To))
+              Orthogonal
+              (between if: (is Enemy (who at: (between))) (apply (remove (between))))
+            )
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (or {(is Loop) (is Line 4) (is Line 3 NE)})
+        (result Mover Win)
+      )
+    )
+  )
+)

@@ -1,0 +1,30 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 8)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (move
+        Add
+        (to
+          (sites Empty)
+          if:
+          (not (is In (to) (sites Around (last To))))
+        )
+        (then (if (= 1 (count MovesThisTurn)) (moveAgain)))
+      )
+    )
+    (end
+      (if
+        (or
+          {
+            (is Loop)
+            (is Connected 3 SidesNoCorners)
+            (is Connected 2 Corners)
+          }
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

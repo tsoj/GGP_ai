@@ -1,0 +1,48 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (add
+          (remove
+            (merge
+              (shift 0 2 (scale 8 2 (rectangle 3 2)))
+              (scale 1 2 (wedge 5 4))
+            )
+            edges:
+            {{0 1} {2 3} {4 5}}
+          )
+          edges:
+          {{0 15} {18 1} {2 11} {14 3} {4 7} {10 5}}
+        )
+        use:Vertex
+      )
+      (hand P1)
+      (piece
+        "PIECE_ALPHA"
+        P1
+        (or
+          (move
+            Hop
+            (between if: (is Enemy (who at: (between))) (apply (remove (between))))
+            (to if: (is Empty (to)))
+          )
+          (move Step (to if: (is Empty (to))))
+        )
+      )
+      (piece "PIECE_BETA" P2 (move Step (to if: (is Empty (to)))))
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      (if
+        (or
+          {(is Loop) (is Connected 3 Sides) (is Connected 4 Sides)}
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

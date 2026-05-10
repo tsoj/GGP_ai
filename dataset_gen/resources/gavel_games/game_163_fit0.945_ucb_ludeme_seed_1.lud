@@ -1,0 +1,23 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 8)) (hand Each)})
+  (rules
+    (play
+      (move
+        Add
+        (to
+          (sites Empty)
+          if:
+          (all
+            Sites
+            (sites Around (to) NotEmpty Orthogonal)
+            if:
+            (is Empty (site))
+          )
+        )
+      )
+    )
+    (end (if (no Moves Next) (result Next Win)))
+  )
+)

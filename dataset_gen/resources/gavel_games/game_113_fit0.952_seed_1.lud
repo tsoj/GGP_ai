@@ -1,0 +1,64 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (remove
+          (hex Triangle 15)
+          cells:
+          {
+            92
+            93
+            94
+            95
+            96
+            97
+            98
+            99
+            100
+            101
+            102
+            103
+            104
+            105
+            106
+            107
+            108
+            109
+            110
+            111
+            112
+            113
+            114
+            115
+            116
+            117
+            118
+            119
+          }
+        )
+      )
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (meta (swap))
+    (play
+      (move
+        Add
+        (to
+          (sites Empty)
+          if:
+          (not (is In (to) (sites Around (last To))))
+        )
+      )
+    )
+    (end
+      {
+        (if (is Line 4) (result Mover Win))
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)

@@ -1,0 +1,21 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (hex 5)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (meta (swap))
+    (play (move Add (to (sites Empty))))
+    (end
+      {
+        (if
+          (=
+            (count Sites in: (sites Board))
+            (count Groups if: (= (who at: (to)) P1))
+          )
+          (result Mover Win)
+        )
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)

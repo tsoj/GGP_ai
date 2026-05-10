@@ -1,0 +1,25 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (tri Limping (- 4 1)) use:Vertex)
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      (if
+        (<=
+          (-
+            (count Sites in: (sites Board))
+            (count Groups if: (= (who at: (to)) Mover))
+          )
+          (counter)
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

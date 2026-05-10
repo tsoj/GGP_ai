@@ -1,0 +1,65 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (dual (remove (hex 4 5) cells: {0 1 15 20 25 32 36 39 44}))
+      )
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (or
+          (move
+            (from)
+            (to (sites Around (from)) if: (is Empty (to)))
+            copy:True
+          )
+          (move
+            (from)
+            (to
+              (sites LineOfSight Empty at: (from))
+              if:
+              (not (is In (to) (sites "Exceptions")))
+            )
+          )
+          (then
+            (and
+              (addScore Mover 1)
+              (if
+                (< 2 (count Sites in: (sites Around (last To) Own)))
+                (moveAgain)
+              )
+            )
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (start
+      {
+        (set Score Each 2)
+        (place "PIECE_ALPHA1" {"A1" "G7"})
+        (place "PIECE_ALPHA2" {"A7" "G1"})
+      }
+    )
+    (play
+      (forEach
+        Piece
+        (then
+          (and
+            (set Score P1 (count Sites in: (sites Occupied by:P1)))
+            (set Score P2 (count Sites in: (sites Occupied by:P2)))
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (or (and (no Moves P1) (no Moves P2)) (is Full))
+        (byScore)
+      )
+    )
+  )
+)

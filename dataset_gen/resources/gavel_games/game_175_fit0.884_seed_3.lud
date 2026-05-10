@@ -1,0 +1,48 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 7))
+      (hand Each)
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Step
+          Orthogonal
+          (to if: (is Empty (to)))
+          (then (if (is Line 3 Orthogonal exact:True) (moveAgain)))
+        )
+      )
+    }
+  )
+  (rules
+    (play
+      (do
+        (move Add (to (sites Empty)))
+        ifAfterwards:
+        (not
+          (can
+            Move
+            (enclose
+              (from (last To))
+              Orthogonal
+              (between
+                if:
+                (is Enemy (who at: (between)))
+                (apply
+                  (and
+                    (move (from (between)) (to (last To)))
+                    (remove (between))
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (end (if (is Line 5) (result Mover Win)))
+  )
+)

@@ -1,0 +1,24 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 9) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play
+      (if
+        (= (count Moves) (var "MoveThatMustBePlant"))
+        (move
+          Remove
+          (sites Occupied by:Enemy container: (var "Board"))
+        )
+        (move
+          Add
+          (to (sites Empty))
+          (then (if (is Line 5 All exact:True) (moveAgain)))
+        )
+      )
+    )
+    (end (if (no Moves Next) (result Mover Win)))
+  )
+)

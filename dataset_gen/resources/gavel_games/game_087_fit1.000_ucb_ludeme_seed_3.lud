@@ -1,0 +1,25 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (hex Limping (- 5 1)) use:Vertex)
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (and
+            (if (not (is Prev Mover)) (moveAgain))
+            (if (is Line 4 All) (moveAgain))
+          )
+        )
+      )
+    )
+    (end (if (is Line 5 All exact:True) (result Mover Win)))
+  )
+)

@@ -1,0 +1,66 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (tri {3 5 3 5 3}) use:Vertex)
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (play
+      (if
+        (not (is Prev Mover))
+        (or
+          (move
+            Add
+            (to
+              (sites Empty)
+              if:
+              (= 0 (count Sites in: (sites Around (to) Own)))
+            )
+          )
+          (do
+            (move
+              Add
+              (to
+                (sites Empty)
+                if:
+                (< 0 (count Sites in: (sites Around (to) Own)))
+              )
+            )
+            ifAfterwards:
+            (and
+              (all
+                Sites
+                (sites Around (sites Group at: (last To)) Enemy)
+                if:
+                (< 3 (count Sites in: (sites Around (site) Own)))
+              )
+              (<
+                3
+                (count
+                  Sites
+                  in:
+                  (sites Around (sites Group at: (last To)) Enemy)
+                )
+              )
+            )
+            (then
+              (and
+                (forEach
+                  Site
+                  (sites Around (sites Group at: (last To)) Enemy)
+                  (remove (sites Around (site) Enemy))
+                )
+                (moveAgain)
+              )
+            )
+          )
+        )
+        (move Pass)
+      )
+    )
+    (end (if (no Moves Next) (result Mover Win)))
+  )
+)

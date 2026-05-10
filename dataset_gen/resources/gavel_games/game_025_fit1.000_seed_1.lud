@@ -1,0 +1,23 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (merge
+          {
+            (square 9 diagonals:Alternating)
+            (shift 2 8 (rotate 180 (wedge 3)))
+            (shift 2 -2 (wedge 3))
+          }
+        )
+        use:Vertex
+      )
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end (if (is Line 5 All exact:True) (result Mover Win)))
+  )
+)

@@ -1,0 +1,89 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {
+      (board (square 8))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (or
+          {
+            (move Step Forward (to if: (is Empty (to))))
+            (move
+              Step
+              (directions {FR FL})
+              (to if: (is Enemy (who at: (to))) (apply (remove (to))))
+            )
+          }
+        )
+      )
+      (piece
+        "PIECE_BETA"
+        Each
+        (move
+          Slide
+          Orthogonal
+          (to if: (is Enemy (who at: (to))) (apply (remove (to))))
+        )
+      )
+      (piece
+        "PIECE_GAMMA"
+        Each
+        (move
+          Step
+          (to
+            if:
+            (not (is Friend (who at: (to))))
+            (apply (if (is Enemy (who at: (to))) (remove (to))))
+          )
+        )
+      )
+      (piece
+        "PIECE_DELTA"
+        Each
+        (move
+          Slide
+          Diagonal
+          (to if: (is Enemy (who at: (to))) (apply (remove (to))))
+        )
+      )
+      (piece
+        "PIECE_EPSILON"
+        Each
+        (move
+          Leap
+          {{F F R F} {F F L F}}
+          (to
+            if:
+            (not (is Friend (who at: (to))))
+            (apply (if (is Enemy (who at: (to))) (remove (to))))
+          )
+        )
+      )
+      (piece
+        "PIECE_ZETA"
+        Each
+        (move
+          Slide
+          (to if: (is Enemy (who at: (to))) (apply (remove (to))))
+        )
+      )
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      (if
+        (or
+          {
+            (is Loop)
+            (is Connected 3 SidesNoCorners)
+            (is Connected 2 Corners)
+          }
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

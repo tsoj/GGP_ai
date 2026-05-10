@@ -1,0 +1,88 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 13)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    phases:
+    {
+      (phase
+        "Opening"
+        (play (move Add (to (sites Empty))))
+        (nextPhase "General")
+      )
+      (phase
+        "General"
+        (play
+          (move
+            Add
+            (to
+              (sites Empty)
+              if:
+              (>
+                Infinity
+                (count
+                  Steps
+                  Orthogonal
+                  (step
+                    (to
+                      if:
+                      (or (is Empty (to)) (is In (to) (sites Occupied by:Mover)))
+                    )
+                  )
+                  (to)
+                  (sites Occupied by:Mover)
+                )
+              )
+            )
+            (then
+              (if
+                (can
+                  Move
+                  (enclose
+                    (from (last To))
+                    Orthogonal
+                    (between if: (is Enemy (who at: (between))) (apply (remove (between))))
+                  )
+                )
+                (enclose
+                  (from (last To))
+                  Orthogonal
+                  (between if: (is Enemy (who at: (between))) (apply (remove (between))))
+                )
+                (custodial
+                  (from (last To))
+                  Orthogonal
+                  (between
+                    before:
+                    (count Rows)
+                    after:
+                    (count Rows)
+                    if:
+                    (is Enemy (who at: (between)))
+                    (apply (remove (between)))
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    }
+    (end
+      (if
+        (<=
+          2
+          (+
+            {
+              (if (is Line 4 N exact:True) 1 0)
+              (if (is Line 4 NE exact:True) 1 0)
+              (if (is Line 4 E exact:True) 1 0)
+              (if (is Line 4 SE exact:True) 1 0)
+            }
+          )
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

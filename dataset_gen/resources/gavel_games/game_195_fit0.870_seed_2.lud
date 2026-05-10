@@ -1,0 +1,48 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (rectangle 2 13)
+        {
+          (track "Track1" {7 8 9 10 11 12} P1 directed:True)
+          (track "Track2" {18 17 16 15 14 13} P2 directed:True)
+        }
+      )
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (play
+      (move
+        Add
+        (piece (+ 1 (% (count Moves) (count Players))))
+        (to (sites Empty))
+        (then
+          (if
+            (!= (count MovesThisTurn) (- (count Players) 1))
+            (moveAgain)
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (and
+          {
+            (not (is Mover P1))
+            (is Next P1)
+            (> (pow (count Players) 2) (count Sites in: (sites Empty)))
+          }
+        )
+        (byScore
+          {
+            (score P1 (* (sizes Group P1)))
+            (score P2 (* (sizes Group P2)))
+          }
+        )
+      )
+    )
+  )
+)

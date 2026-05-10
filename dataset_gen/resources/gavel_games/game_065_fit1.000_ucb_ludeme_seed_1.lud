@@ -1,0 +1,92 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (rectangle 4 12)
+        {
+          (track "Track1" "0,E,N1,W,N1,E,N1,W" P1 directed:True)
+          (track "Track2" "47,W,S1,E,S1,W,S1,E" P2 directed:True)
+        }
+        use:Vertex
+      )
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (if
+          (and (not (is In (from) (sites Next "Home"))) (!= 0 (var)))
+          (or
+            (if
+              (not (= 1 (var)))
+              (move
+                (from
+                  (from)
+                  if:
+                  (if
+                    (= (state at: (from)) 1)
+                    True
+                    (= 2 (mapEntry "Throw" (count Pips)))
+                  )
+                )
+                (to
+                  (trackSite Move steps: (var))
+                  if:
+                  (not (is Friend (who at: (to))))
+                  (apply (if (is Enemy (who at: (to))) (remove (to))))
+                )
+                (then
+                  (if
+                    (not (= (state at: (last To)) 1))
+                    (set State at: (last To) 1)
+                  )
+                )
+              )
+            )
+            (move
+              (from
+                (from)
+                if:
+                (if
+                  (= (state at: (from)) 1)
+                  True
+                  (= 2 (mapEntry "Throw" (count Pips)))
+                )
+              )
+              (to
+                (trackSite
+                  Move
+                  steps:
+                  (/ (mapEntry "Throw" (count Pips)) 2)
+                )
+                if:
+                (not (is Friend (who at: (to))))
+                (apply (if (is Enemy (who at: (to))) (remove (to))))
+              )
+              (then
+                (and
+                  (if
+                    (not (= (state at: (last To)) 1))
+                    (set State at: (last To) 1)
+                  )
+                  (if (not (= 1 (var))) (and (set Var 1) (moveAgain)) (set Var 0))
+                )
+              )
+            )
+          )
+        )
+      )
+      (regions "Home" P1 (sites Bottom))
+      (regions "Home" P2 (sites Top))
+      (map
+        "Throw"
+        {(pair 0 8) (pair 1 0) (pair 2 0) (pair 3 2) (pair 4 12)}
+      )
+      (dice d:2 from:0 num:4)
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end (if (is Line 4 All) (result Mover Win)))
+  )
+)

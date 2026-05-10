@@ -1,0 +1,27 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 13) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play
+      (or
+        (move Add (to (sites Empty) if: (is Empty (to))))
+        (move
+          Add
+          (to
+            (sites Empty)
+            if:
+            (is
+              In
+              (count Steps All (to) (sites Perimeter))
+              (sites Outer)
+            )
+          )
+        )
+      )
+    )
+    (end (if (is Line 5) (result Mover Win)))
+  )
+)

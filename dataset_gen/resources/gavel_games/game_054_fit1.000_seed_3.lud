@@ -1,0 +1,15 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 8)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (do
+        (move Add (to (sites Empty)))
+        ifAfterwards:
+        (> (count Liberties Orthogonal) 0)
+      )
+    )
+    (end (if (is Line 5) (result Mover Win)))
+  )
+)

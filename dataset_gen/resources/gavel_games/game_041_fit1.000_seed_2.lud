@@ -1,0 +1,38 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 13) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    phases:
+    {
+      (phase
+        "Opening"
+        (play
+          (move
+            Add
+            (to
+              (union (sites Empty) (sites {(centrePoint)}))
+              if:
+              (< (count Cell at: (to)) 4)
+            )
+          )
+        )
+        (nextPhase "Playing")
+      )
+      (phase
+        "Playing"
+        (play
+          (move
+            Add
+            (to (sites Empty))
+            (then (if (is Even (count MovesThisTurn)) (moveAgain)))
+          )
+        )
+        (nextPhase "Playing")
+      )
+    }
+    (end (if (is Line 5 All) (result Mover Win)))
+  )
+)

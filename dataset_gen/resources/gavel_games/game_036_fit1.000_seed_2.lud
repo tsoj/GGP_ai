@@ -1,0 +1,49 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 8)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (or
+        (move
+          Select
+          (from (sites Occupied by:Shared))
+          (then
+            (and
+              {
+                (forEach Site (sites Group at: (last To)) (moveAgain))
+                (addScore Mover 1)
+                (if
+                  (not
+                    (can
+                      Move
+                      (move
+                        Select
+                        (from (sites Occupied by:Shared))
+                        (to if: (is Empty (to)))
+                      )
+                    )
+                  )
+                  (addScore Mover 1)
+                )
+              }
+            )
+          )
+        )
+        (move Add (to (sites Empty)))
+      )
+    )
+    (end
+      (if
+        (or
+          {
+            (no Moves Next)
+            (is Connected 3 SidesNoCorners)
+            (is Connected 2 Corners)
+          }
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

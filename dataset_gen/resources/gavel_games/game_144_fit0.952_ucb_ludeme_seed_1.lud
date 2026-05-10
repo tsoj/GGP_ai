@@ -1,0 +1,35 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 13) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play
+      (or
+        (move
+          Add
+          (to
+            (sites Empty)
+            if:
+            (<
+              (count Steps All (to) (sites Perimeter))
+              (size Stack at: (to))
+            )
+          )
+        )
+        (move
+          Add
+          (to (sites Empty))
+          (then (if (is Line 4) (moveAgain)))
+        )
+      )
+    )
+    (end
+      {
+        (if (is Line 5) (result Mover Win))
+        (if (is Line 4) (result Mover Loss))
+      }
+    )
+  )
+)

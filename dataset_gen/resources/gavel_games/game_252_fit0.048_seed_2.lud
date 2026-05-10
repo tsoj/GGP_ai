@@ -1,0 +1,21 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 5))
+      (piece
+        "PIECE_ALPHA"
+        P1
+        (move Step (to if: (is Empty (to))))
+      )
+      (piece "PIECE_BETA" P2)
+      (piece "PIECE_GAMMA" Neutral)
+      (hand Each)
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end (if (is Line 3) (result Mover Win)))
+  )
+)

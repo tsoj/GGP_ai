@@ -1,0 +1,40 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 8)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (meta (swap))
+    (play
+      (move
+        Add
+        (to
+          (sites Empty)
+          if:
+          (or
+            (is Empty (to))
+            (and
+              (< 4 (count Sites in: (sites Around (to) Own)))
+              (is Empty (site))
+            )
+          )
+        )
+      )
+    )
+    (end
+      {
+        (if
+          (=
+            5
+            (count
+              Sites
+              in:
+              (sites Around (last To) if: (is Friend (who at: (to))))
+            )
+          )
+          (result Mover Win)
+        )
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)

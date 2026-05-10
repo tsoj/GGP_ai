@@ -1,0 +1,39 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {
+      (board (square 8))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Slide
+          Orthogonal
+          (to
+            if:
+            (and
+              (is Enemy (who at: (to)))
+              (not (is In (to) (sites Around (last To) includeSelf:True)))
+            )
+            (apply (remove (to)))
+          )
+        )
+      )
+      (regions P1 (sites Top))
+      (regions P2 (sites Bottom))
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (expand (sites Bottom)))
+        (place "PIECE_ALPHA2" (expand (sites Top)))
+      }
+    )
+    (play (forEach Piece))
+    (end
+      (if (is In (last To) (sites Mover)) (result Mover Win))
+    )
+  )
+)

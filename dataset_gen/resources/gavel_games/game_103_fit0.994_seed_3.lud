@@ -1,0 +1,47 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (rotate 30 (hex 4))) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (start
+      {
+        (set Score Each 2)
+        (place "PIECE_ALPHA1" {"A1" "G7"})
+        (place "PIECE_ALPHA2" {"A5" "D9"})
+      }
+    )
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (and
+            (set
+              Score
+              Mover
+              (/
+                (+
+                  (results from: (sites Occupied by:Mover) to:1 (* 1 (size Group at: (from))))
+                )
+                2
+              )
+            )
+            (set
+              Score
+              Next
+              (/
+                (+
+                  (results from: (sites Occupied by:Next) to:1 (* 1 (size Group at: (from))))
+                )
+                2
+              )
+            )
+          )
+        )
+      )
+    )
+    (end (if (no Moves Next) (byScore)))
+  )
+)

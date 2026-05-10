@@ -1,0 +1,40 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {
+      (board (square 5 diagonals:Solid))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Leap
+          {{F F R F} {F F L F}}
+          forward:True
+          (to
+            if:
+            (is Empty (to))
+            (apply (fromTo (from (last To)) (to (last To))))
+          )
+        )
+      )
+      (regions P1 (sites Top))
+      (regions P2 (sites Bottom))
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (expand (sites Bottom)))
+        (place "PIECE_ALPHA2" (expand (sites Top)))
+      }
+    )
+    (play (forEach Piece))
+    (end
+      (if
+        (or (is In (last To) (sites Mover)) (no Pieces Next))
+        (result Mover Win)
+      )
+    )
+  )
+)

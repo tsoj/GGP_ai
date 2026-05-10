@@ -1,0 +1,48 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (rectangle 7 11)) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (start
+      {
+        (set Score Each 2)
+        (place "PIECE_ALPHA1" {"A1" "G7"})
+        (place "PIECE_ALPHA2" {"A7" "G1"})
+      }
+    )
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (set
+            Score
+            Mover
+            (/
+              (+
+                (results
+                  from:
+                  (sites Occupied by:Mover)
+                  to:1
+                  (* 1 (if (is Mover (who at: (to))) 1 0))
+                )
+              )
+              2
+            )
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (or
+          (= (count Sites in: (sites Occupied by:Mover)) 0)
+          (is Full)
+        )
+        (byScore)
+      )
+    )
+  )
+)

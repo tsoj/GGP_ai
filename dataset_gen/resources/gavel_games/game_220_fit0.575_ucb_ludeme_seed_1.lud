@@ -1,0 +1,76 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 6)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (move
+        Add
+        (to
+          (sites Empty)
+          if:
+          (or
+            (is Empty (to))
+            (and
+              (= 1 (count Sites in: (sites Around (to) Own)))
+              (is Friend (who at: (ahead (to) steps:1)))
+            )
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (is Full)
+        (byScore
+          {
+            (score
+              P1
+              (+
+                (results
+                  from:
+                  (sites Occupied by:P1)
+                  to:0
+                  (if
+                    (or
+                      {
+                        (is Connected at: (from) {(sites Side N) (sites Side S)})
+                        (is Connected at: (from) {(sites Side E) (sites Side W)})
+                        (is Connected at: (from) {(sites Side NW) (sites Side SE)})
+                        (is Connected at: (from) {(sites Side NE) (sites Side SW)})
+                      }
+                    )
+                    1
+                    -1
+                  )
+                )
+              )
+            )
+            (score
+              P2
+              (+
+                (results
+                  from:
+                  (sites Occupied by:P2)
+                  to:0
+                  (if
+                    (or
+                      {
+                        (is Connected at: (from) {(sites Side N) (sites Side S)})
+                        (is Connected at: (from) {(sites Side E) (sites Side W)})
+                        (is Connected at: (from) {(sites Side NW) (sites Side SE)})
+                        (is Connected at: (from) {(sites Side NE) (sites Side SW)})
+                      }
+                    )
+                    1
+                    -1
+                  )
+                )
+              )
+            )
+          }
+        )
+      )
+    )
+  )
+)

@@ -1,0 +1,3 @@
+[submodule "Ludii"]
+	path = Ludii
+	url = https://github.com/Ludeme/Ludii.git

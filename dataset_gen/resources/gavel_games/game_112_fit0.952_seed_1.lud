@@ -1,0 +1,41 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 15) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (and
+            (custodial
+              (from (last To))
+              Orthogonal
+              (between (max 1) if: (is Enemy (who at: (between))) (apply (remove (between))))
+              (to if: (is Friend (who at: (to))))
+            )
+            (surround
+              (from (last To))
+              Orthogonal
+              (between
+                if:
+                (and
+                  {
+                    (is Enemy (who at: (between)))
+                    (is In (between) (sites Corners))
+                  }
+                )
+                (apply (remove (between)))
+              )
+              (to if: (is Friend (who at: (to))))
+            )
+          )
+        )
+      )
+    )
+    (end (if (is Line 5 All exact:True) (result Mover Win)))
+  )
+)

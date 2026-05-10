@@ -1,0 +1,63 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 10))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Step
+          Orthogonal
+          (to (apply (remove (sites Around (to) All))))
+          (then
+            (if
+              (=
+                1
+                (count
+                  Sites
+                  in:
+                  (sites Occupied by:Mover container: "Board")
+                )
+              )
+              (moveAgain)
+            )
+          )
+        )
+      )
+      (piece "PIECE_BETA" Each)
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (sites Phase 1))
+        (place "PIECE_ALPHA2" (sites Phase 0))
+      }
+    )
+    (play
+      (if
+        (is Prev Mover)
+        (move
+          Add
+          (piece (id "PIECE_BETA" Mover))
+          (to
+            (sites
+              Around
+              (last To)
+              if:
+              (and
+                (is Empty (site))
+                (< (count Sites in: (sites Around (to) Own)) 4)
+              )
+            )
+          )
+          (then (set Pending))
+        )
+        (forEach Piece)
+      )
+    )
+    (end (if (no Moves Next) (result Next Loss)))
+  )
+)

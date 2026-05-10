@@ -1,0 +1,17 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 5)) (piece "PIECE_ALPHA" P1) (piece "PIECE_BETA" P2)}
+  )
+  (rules
+    (meta {(swap) (no Repeat)})
+    (play (move Add (to (sites Empty))))
+    (end
+      {
+        (if (is Line 5) (result Mover Win))
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)

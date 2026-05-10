@@ -1,0 +1,53 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (hex Triangle 11) use:Vertex)
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (and
+            (forEach
+              Site
+              (sites Around (last To))
+              (if
+                (=
+                  (count Sites in: (sites Around (site) Own))
+                  (count Sites in: (sites Around (site) Enemy))
+                )
+                (trigger "Draw" Mover)
+              )
+            )
+            (forEach
+              Group
+              Orthogonal
+              if:
+              (is Mover (who at: (to)))
+              (if
+                (is Odd (count Sites in: (sites)))
+                (and
+                  (addScore Mover -1)
+                  (forEach Site (sites) (set State at: (site) 1))
+                )
+                (forEach Site (sites) (set State at: (site) 0))
+              )
+            )
+          )
+        )
+      )
+    )
+    (end
+      {
+        (if (is Line 5 All) (result Mover Win))
+        (if (is Line 4 All) (result Mover Loss))
+      }
+    )
+  )
+)

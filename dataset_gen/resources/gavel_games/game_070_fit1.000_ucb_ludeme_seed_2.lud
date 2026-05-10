@@ -1,0 +1,9 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 10)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end (if (is Line 5) (result Mover Win)))
+  )
+)

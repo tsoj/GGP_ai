@@ -1,0 +1,60 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (hex 5)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (meta (swap))
+    (play (move Add (to (sites Empty))))
+    (end
+      {
+        (if
+          (=
+            (count Sites in: (sites Board))
+            (max
+              (results
+                from:
+                (difference (sites Board) (sites Group at: (last To)))
+                to:2
+                (count
+                  Sites
+                  in:
+                  (intersection
+                    (sites Board)
+                    (sites
+                      Group
+                      at:
+                      (from)
+                      if:
+                      (<=
+                        (count
+                          Sites
+                          in:
+                          (intersection
+                            (sites Board)
+                            (sites
+                              Direction
+                              from:
+                              (to)
+                              stop:
+                              (is Occupied (to))
+                              stopIncluded:True
+                              distance:
+                              (size Stack at: (last To))
+                            )
+                          )
+                        )
+                        (size Stack at: (last To))
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+          (result Mover Win)
+        )
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)

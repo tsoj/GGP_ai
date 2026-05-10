@@ -1,0 +1,16 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {(board (square 15) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      {
+        (if (is Line 5 All) (result Mover Win))
+        (if (is Line 3 All) (result Mover Loss))
+      }
+    )
+  )
+)

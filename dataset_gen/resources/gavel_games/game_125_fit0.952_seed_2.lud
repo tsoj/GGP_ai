@@ -1,0 +1,43 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 6))
+      (hand Each)
+      (piece
+        "PIECE_ALPHA"
+        P1
+        (if
+          (is Line 4 Orthogonal through: (from))
+          (move Step Orthogonal (to if: (is Empty (to))))
+          (move
+            Step
+            Orthogonal
+            (to if: (is Empty (to)))
+            (then (if (is Line 3 Orthogonal exact:True) (moveAgain)))
+          )
+        )
+      )
+      (piece
+        "PIECE_BETA"
+        P2
+        (move
+          Step
+          Orthogonal
+          (to if: (is Empty (to)))
+          (then (if (is Line 3 Orthogonal exact:True) (moveAgain)))
+        )
+      )
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      (if
+        (or {(is Loop) (is Line 4 Orthogonal) (no Moves Next)})
+        (result Mover Win)
+      )
+    )
+  )
+)

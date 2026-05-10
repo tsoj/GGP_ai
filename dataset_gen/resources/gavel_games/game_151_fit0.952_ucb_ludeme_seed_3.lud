@@ -1,0 +1,37 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 13)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    phases:
+    {
+      (phase
+        "Opening"
+        (play (move Add (to (sites Empty))))
+        (nextPhase "General")
+      )
+      (phase
+        "General"
+        (play
+          (move
+            Add
+            (to (sites Empty))
+            (then (if (not (is Prev Mover)) (moveAgain)))
+          )
+        )
+      )
+    }
+    (end
+      (if
+        (<=
+          2
+          (+
+            (count Groups Orthogonal if: (= (who at: (to)) P1) min:3)
+            (count Groups Orthogonal if: (= (who at: (to)) P2) min:3)
+          )
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

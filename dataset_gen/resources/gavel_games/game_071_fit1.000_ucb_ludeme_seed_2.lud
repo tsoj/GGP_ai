@@ -1,0 +1,45 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 10))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Step
+          Orthogonal
+          (to (apply (if (is Occupied (to)) (remove (to)))))
+          (then
+            (if
+              (is Line 4 Orthogonal exact:True)
+              (if
+                (<
+                  (count
+                    Sites
+                    in:
+                    (sites Around (last To) NotEmpty Orthogonal)
+                  )
+                  4
+                )
+                (moveAgain)
+              )
+            )
+          )
+        )
+      )
+      (piece "PIECE_BETA" Each)
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (sites Phase 1))
+        (place "PIECE_ALPHA2" (sites Phase 0))
+      }
+    )
+    (play (forEach Piece))
+    (end (if (is Line 4 Orthogonal) (result Mover Win)))
+  )
+)

@@ -1,0 +1,59 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 7))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (or
+          (move Step (to if: (is Empty (to))))
+          (move
+            Hop
+            (between if: (is Enemy (who at: (between))) (apply (remove (between))))
+            (to if: (is Empty (to)))
+          )
+          (then
+            (forEach
+              Site
+              (intersection (sites Around (last To)) (sites Occupied by:Next))
+              (and
+                (remove (site))
+                (add (piece (id "PIECE_ALPHA" Mover)) (to (site)))
+              )
+            )
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (sites Bottom) state:1)
+        (place "PIECE_ALPHA2" (sites Top) state:1)
+      }
+    )
+    (play
+      (forEach
+        Piece
+        (then
+          (and
+            (set Score P1 (count Sites in: (sites Occupied by:P1)))
+            (set Score P2 (count Sites in: (sites Occupied by:P2)))
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (or
+          (= (count Sites in: (sites Occupied by:Mover)) 0)
+          (is Full)
+        )
+        (byScore)
+      )
+    )
+  )
+)

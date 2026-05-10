@@ -1,0 +1,46 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 3 diagonals:Solid))
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (meta (swap))
+    (play
+      (move
+        Add
+        (to
+          (sites Empty)
+          if:
+          (<=
+            (count
+              Sites
+              in:
+              (intersection
+                (sites LineOfSight at: (to) All)
+                (sites Occupied by:Mover)
+              )
+            )
+            (count
+              Sites
+              in:
+              (intersection
+                (sites LineOfSight at: (to) All)
+                (sites Occupied by:Mover)
+              )
+            )
+          )
+        )
+      )
+    )
+    (end
+      {
+        (if (is Line 4) (result Mover Win))
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)

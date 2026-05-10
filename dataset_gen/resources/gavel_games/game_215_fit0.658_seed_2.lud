@@ -1,0 +1,79 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (merge
+          (shift
+            0
+            (/ (- 7 3) 2)
+            (rectangle 3 7 diagonals:Alternating)
+          )
+          (shift
+            (/ (- 7 3) 2)
+            0
+            (rectangle 7 3 diagonals:Alternating)
+          )
+        )
+        use:Vertex
+      )
+      (piece
+        "PIECE_ALPHA"
+        P1
+        (or
+          (move
+            Hop
+            (between if: (is Enemy (who at: (between))) (apply (remove (between))))
+            (to if: (is Empty (to)))
+          )
+          (move Step (to if: (is Empty (to))))
+        )
+      )
+      (piece
+        "PIECE_ALPHA"
+        P2
+        N
+        (move
+          Step
+          (directions {Forwards Rightward Leftward})
+          (to if: (is Empty (to)))
+        )
+      )
+      (regions "Home" P2 (sites {"B9" "E5" "F1" "D7"}))
+      (regions P1 {(sites Top) (sites Bottom)})
+    }
+  )
+  (rules
+    (play
+      (move
+        Add
+        (piece (+ 1 (% (count Moves) (count Players))))
+        (to (sites Empty))
+        (then
+          (if
+            (!= (count MovesThisTurn) (- (count Players) 1))
+            (moveAgain)
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (and
+          {
+            (not (is Line 3))
+            (is Next P1)
+            (> (pow (count Players) 2) (count Sites in: (sites Empty)))
+          }
+        )
+        (byScore
+          {
+            (score P1 (* (sizes Group P1)))
+            (score P2 (* (sizes Group P2)))
+          }
+        )
+      )
+    )
+  )
+)

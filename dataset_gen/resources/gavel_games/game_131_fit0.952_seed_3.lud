@@ -1,0 +1,27 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 15) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play
+      (do
+        (move Add (to (sites Empty)))
+        ifAfterwards:
+        (<
+          (var "cutOffValue")
+          (+
+            (count
+              Sites
+              in:
+              (sites Around (last To) NotEmpty Orthogonal)
+            )
+            (count Sites in: (sites Around (last To) NotEmpty Diagonal))
+          )
+        )
+      )
+    )
+    (end (if (is Line 6) (result Mover Win)))
+  )
+)

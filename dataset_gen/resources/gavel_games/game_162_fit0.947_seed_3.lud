@@ -1,0 +1,94 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {
+      (board (square 7))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (or
+          (move
+            Hop
+            Orthogonal
+            (between
+              if:
+              (and
+                (is Enemy (who at: (between)))
+                (not (is In (between) (sites "Intersection")))
+              )
+              (apply (remove (between)))
+            )
+            (to if: (is Empty (to)))
+            (then
+              (if
+                (can
+                  Move
+                  (hop
+                    (from (last To))
+                    Orthogonal
+                    (between
+                      if:
+                      (and
+                        (not (is In (between) (sites "Intersection")))
+                        (is Enemy (who at: (between)))
+                      )
+                    )
+                    (to if: (is Empty (to)))
+                  )
+                )
+                (moveAgain)
+              )
+            )
+          )
+          (move
+            (from)
+            (to
+              (difference
+                (expand origin: (from) steps:2)
+                (expand origin: (from))
+              )
+              if:
+              (is Empty (to))
+            )
+          )
+          (then
+            (forEach
+              Site
+              (intersection (sites Around (last To)) (sites Occupied by:Next))
+              (remove (site))
+            )
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (sites Bottom) state:1)
+        (place "PIECE_ALPHA2" (sites Top) state:1)
+      }
+    )
+    (play
+      (forEach
+        Piece
+        (then
+          (and
+            (set Score P1 (count Sites in: (sites Occupied by:P1)))
+            (set Score P2 (count Sites in: (sites Occupied by:P2)))
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (or
+          (= (count Sites in: (sites Occupied by:Mover)) 0)
+          (is Full)
+        )
+        (byScore)
+      )
+    )
+  )
+)

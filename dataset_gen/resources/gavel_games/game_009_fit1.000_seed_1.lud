@@ -1,0 +1,21 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (tri Hexagon 6) use:Vertex)
+      (piece "PIECE_ALPHA" P1)
+      (piece "PIECE_BETA" P2)
+    }
+  )
+  (rules
+    (meta (swap))
+    (play (move Add (to (sites Empty))))
+    (end
+      {
+        (if (is Line 4) (result Mover Win))
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)

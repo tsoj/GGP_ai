@@ -1,0 +1,51 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 7))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (or
+          (move
+            (from (from))
+            (to (sites Around (from)) if: (is Empty (to)))
+            copy:True
+          )
+          (move Slide Orthogonal (between (exact 2)))
+          (then
+            (and
+              (addScore Mover 1)
+              (if
+                (< 2 (count Sites in: (sites Around (last To) Own)))
+                (moveAgain)
+              )
+            )
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (start
+      {
+        (set Score Each 2)
+        (place "PIECE_ALPHA1" {"A1" "G7"})
+        (place "PIECE_ALPHA2" {"A7" "G1"})
+      }
+    )
+    (play
+      (forEach
+        Piece
+        (then
+          (and
+            (set Score P1 (count Sites in: (sites Occupied by:P1)))
+            (set Score P2 (count Sites in: (sites Occupied by:P2)))
+          )
+        )
+      )
+    )
+    (end (if (or (= (score P1) 0) (is Full)) (byScore)))
+  )
+)

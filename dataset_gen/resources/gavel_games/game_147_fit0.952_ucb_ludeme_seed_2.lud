@@ -1,0 +1,22 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {
+      (board
+        (merge
+          {
+            (square 5 diagonals:Alternating)
+            (shift 0 4 (rotate 180 (wedge 3)))
+            (shift 0 -2 (wedge 3))
+          }
+        )
+      )
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end (if (is Line 4 byLevel:True) (result Mover Win)))
+  )
+)

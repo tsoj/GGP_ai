@@ -1,0 +1,46 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {
+      (board (square 8))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Step
+          (directions {FR FL})
+          (to
+            if:
+            (not (is Friend (who at: (to))))
+            (apply
+              (remove
+                (to)
+                (then
+                  (if
+                    (is In (last To) (sites Mover))
+                    (promote (last To) (piece "PIECE_BETA") Mover)
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+      (regions P1 (sites Top))
+      (regions P2 (sites Bottom))
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (union (sites Row 1) (sites Row 2)))
+        (place "PIECE_ALPHA2" (union (sites Row 5) (sites Row 6)))
+      }
+    )
+    (play (forEach Piece))
+    (end
+      (if (is In (last To) (sites Mover)) (result Mover Win))
+    )
+  )
+)

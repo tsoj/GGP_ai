@@ -1,0 +1,26 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (hex 8)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then (if (is Line 3) (moveAgain)))
+      )
+    )
+    (end
+      (if
+        (or
+          {
+            (is Loop)
+            (is Connected 3 SidesNoCorners)
+            (is Connected 4 Sides)
+          }
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

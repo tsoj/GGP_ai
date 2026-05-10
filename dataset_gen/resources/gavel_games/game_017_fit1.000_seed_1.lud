@@ -1,0 +1,41 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (hex 8)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (or
+        (move Add (to (sites Empty)) (then (set Counter)))
+        (forEach Piece)
+        (then
+          (priority
+            (surround
+              (from (last To))
+              Orthogonal
+              (between if: (is Friend (who at: (between))))
+              (to if: (is Occupied (to)))
+            )
+            (surround
+              (from (last To))
+              Orthogonal
+              (between if: (is Enemy (who at: (between))))
+              (to if: (is Occupied (to)))
+            )
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (or
+          {
+            (is Loop)
+            (is Connected 3 SidesNoCorners)
+            (is Connected 2 Corners)
+          }
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

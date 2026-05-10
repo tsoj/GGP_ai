@@ -1,0 +1,27 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (tri Limping (- 4 1)) use:Vertex)
+      (piece "PIECE_ALPHA" P1)
+      (piece "PIECE_ALPHA" P2)
+      (hand Each)
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      (if
+        (or
+          {
+            (is Loop)
+            (is Connected 3 SidesNoCorners)
+            (is Connected 2 Corners)
+          }
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

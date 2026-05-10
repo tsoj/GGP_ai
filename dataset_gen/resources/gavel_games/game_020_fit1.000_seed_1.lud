@@ -1,0 +1,18 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 11)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (if
+        (= (var) 1)
+        (or
+          (move Add (to (sites Empty) if: (not (= (id P1) (mover)))))
+          (move Add (to (sites Empty)))
+        )
+        (move Add (to (sites Empty)))
+      )
+    )
+    (end (if (is Line 5 All exact:True) (result Mover Win)))
+  )
+)

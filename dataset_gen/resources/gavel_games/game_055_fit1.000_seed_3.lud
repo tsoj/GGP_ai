@@ -1,0 +1,17 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 13) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play
+      (do
+        (move Add (to (sites Empty)))
+        ifAfterwards:
+        (not (is Pattern {F R F R F} whats: {(mover) (next)}))
+      )
+    )
+    (end (if (is Line 5) (result Mover Win)))
+  )
+)

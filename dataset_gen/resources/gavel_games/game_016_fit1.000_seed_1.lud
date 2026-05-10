@@ -1,0 +1,29 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 11)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (if
+        (not (is Prev Mover))
+        (move
+          Add
+          (to
+            (sites Empty)
+            if:
+            (> Infinity (count Steps All (to) (sites Perimeter)))
+          )
+          (then
+            (set
+              Score
+              Mover
+              (count Sites in: (sites Occupied by:Mover))
+            )
+          )
+        )
+        (move Add (to (sites Empty)))
+      )
+    )
+    (end (if (is Line 5 All exact:True) (result Mover Win)))
+  )
+)

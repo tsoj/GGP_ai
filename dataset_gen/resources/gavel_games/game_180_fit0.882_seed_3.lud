@@ -1,0 +1,165 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 9))
+      (piece
+        "PIECE_ALPHA"
+        P1
+        (move
+          Slide
+          Orthogonal
+          (between
+            if:
+            (and (!= (between) (centrePoint)) (is Empty (between)))
+          )
+          (then
+            (or
+              {
+                (custodial
+                  (from (last To))
+                  Orthogonal
+                  (between
+                    (max 1)
+                    if:
+                    (= (what at: (between)) (id "PIECE_ALPHA2"))
+                    (apply (remove (between)))
+                  )
+                  (to
+                    if:
+                    (or (is Friend (who at: (to))) (= (to) (centrePoint)))
+                  )
+                )
+                (surround
+                  (from (last To))
+                  Orthogonal
+                  (between
+                    if:
+                    (and
+                      (= (what at: (between)) (id "PIECE_BETA2"))
+                      (or
+                        (= (between) (centrePoint))
+                        (is In (between) (sites "OrthogonalSitesCentre"))
+                      )
+                    )
+                    (apply (trigger "Surrounded" P2))
+                  )
+                  (to
+                    if:
+                    (or (is Friend (who at: (to))) (= (to) (centrePoint)))
+                  )
+                )
+                (custodial
+                  (from (last To))
+                  Orthogonal
+                  (between
+                    (max 1)
+                    if:
+                    (and
+                      (= (what at: (between)) (id "PIECE_BETA2"))
+                      (and
+                        (!= (between) (centrePoint))
+                        (not (is In (between) (sites "OrthogonalSitesCentre")))
+                      )
+                    )
+                    (apply (trigger "Surrounded" P2))
+                  )
+                  (to if: (is Friend (who at: (to))))
+                )
+              }
+            )
+          )
+        )
+      )
+      (piece
+        "PIECE_ALPHA"
+        P2
+        (move
+          Slide
+          Orthogonal
+          (between
+            if:
+            (and (!= (between) (centrePoint)) (is Empty (between)))
+          )
+          (then
+            (custodial
+              (from (last To))
+              Orthogonal
+              (between
+                (max 1)
+                if:
+                (= (what at: (between)) (id "PIECE_ALPHA1"))
+                (apply (remove (between)))
+              )
+              (to
+                if:
+                (or (is Friend (who at: (to))) (= (to) (centrePoint)))
+              )
+            )
+          )
+        )
+      )
+      (piece
+        "PIECE_BETA"
+        P2
+        (move
+          Slide
+          Orthogonal
+          (between
+            if:
+            (and (!= (between) (centrePoint)) (is Empty (between)))
+          )
+          (then
+            (custodial
+              (from (last To))
+              Orthogonal
+              (between
+                (max 1)
+                if:
+                (= (what at: (between)) (id "PIECE_ALPHA1"))
+                (apply (remove (between)))
+              )
+              (to
+                if:
+                (or (is Friend (who at: (to))) (= (to) (centrePoint)))
+              )
+            )
+          )
+        )
+      )
+      (regions
+        "OrthogonalSitesCentre"
+        (difference
+          (expand origin: (centrePoint) Orthogonal)
+          (centrePoint)
+        )
+      )
+    }
+  )
+  (rules
+    (start
+      {
+        (place
+          "PIECE_ALPHA1"
+          {"D1" "E1" "F1" "E2" "A4" "A5" "A6" "B5" "I4" "I5" "I6" "H5" "E8" "D9" "E9" "F9" "E8"}
+        )
+        (place
+          "PIECE_ALPHA2"
+          {"E3" "E4" "E6" "E7" "C5" "D5" "F5" "G5"}
+        )
+        (place "PIECE_BETA2" (centrePoint))
+      }
+    )
+    (play (forEach Piece))
+    (end
+      {
+        (if
+          (is Within (id "PIECE_BETA2") in: (sites Outer))
+          (result P2 Win)
+        )
+        (if (is Triggered "Surrounded" P2) (result P1 Win))
+      }
+    )
+  )
+)

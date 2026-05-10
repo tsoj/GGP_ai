@@ -1,0 +1,41 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 7))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (or
+          (move
+            (from (from) level: (level))
+            (to (sites Around (from)) if: (is Empty (to)))
+            copy:True
+          )
+          (move Step (from (from) level: (level)) (to if: (is Empty (to))))
+          (then
+            (forEach
+              Site
+              (intersection (sites Around (last To)) (sites Occupied by:Next))
+              (and
+                (remove (site))
+                (add (piece (id "PIECE_ALPHA" Mover)) (to (site)))
+              )
+            )
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (sites Bottom))
+        (place "PIECE_ALPHA2" (sites Top))
+      }
+    )
+    (play (forEach Piece))
+    (end (if (no Pieces Next) (result Mover Win)))
+  )
+)

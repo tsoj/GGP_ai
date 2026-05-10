@@ -1,0 +1,19 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 9) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (and (if (not (is Prev Mover)) (moveAgain)) (set Counter))
+        )
+      )
+    )
+    (end (if (is Line 4) (result Mover Win)))
+  )
+)

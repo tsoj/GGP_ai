@@ -1,0 +1,34 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 5)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (start
+      {
+        (place
+          "PIECE_ALPHA1"
+          (union {(expand (sites Bottom)) (sites {"D3" "E3"})})
+        )
+        (place
+          "PIECE_ALPHA2"
+          (union {(sites {"A3" "B3"}) (expand (sites Top))})
+        )
+      }
+    )
+    (play
+      (forEach
+        Piece
+        "PIECE_ALPHA"
+        (or
+          (move
+            Hop
+            (between if: (is Enemy (who at: (between))) (apply (remove (between))))
+            (to if: (is Empty (to)))
+          )
+          (move Step (to if: (is Empty (to))))
+        )
+      )
+    )
+    (end (if (no Moves Next) (result Next Loss)))
+  )
+)

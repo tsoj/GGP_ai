@@ -1,0 +1,18 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 7)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (move
+        Add
+        (to
+          (sites Empty)
+          if:
+          (and (is Empty (to)) (!= (to) (centrePoint)))
+        )
+      )
+    )
+    (end (if (is Line 4) (result Mover Win)))
+  )
+)

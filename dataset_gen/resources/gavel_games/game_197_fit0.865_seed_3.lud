@@ -1,0 +1,44 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (rectangle 5 12)
+        {
+          (track "Track1" "0,E,N1,W,N1,E,N1,W,N1,E,N1,W" P1 directed:True)
+          (track "Track2" "47,W,S1,E,S1,W,S1,E,S1,W,S1,E" P2 directed:True)
+        }
+        use:Vertex
+      )
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Leap
+          {{F F R F} {F F L F}}
+          forward:True
+          (to
+            if:
+            (not (is Friend (who at: (to))))
+            (apply (if (is Enemy (who at: (to))) (remove (to))))
+          )
+        )
+      )
+      (regions P1 (sites Top))
+      (regions P2 (sites Bottom))
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (sites Bottom))
+        (place "PIECE_ALPHA2" (sites Top))
+      }
+    )
+    (play (forEach Piece))
+    (end
+      (if (is In (last To) (sites Mover)) (result Mover Win))
+    )
+  )
+)

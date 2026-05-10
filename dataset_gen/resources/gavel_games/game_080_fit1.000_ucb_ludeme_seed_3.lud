@@ -1,0 +1,41 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {
+      (board (hex Diamond 11))
+      (piece "PIECE_ALPHA" Each)
+      (regions P1 {(sites Side NE) (sites Side SW)})
+      (regions P2 {(sites Side NW) (sites Side SE)})
+    }
+  )
+  (rules
+    (meta (swap))
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (and
+            (set Score Mover 0)
+            (forEach
+              Group
+              Orthogonal
+              if:
+              (is Mover (who at: (to)))
+              (if
+                (is Odd (count Sites in: (sites)))
+                (and
+                  (if (is Even (count Sites in: (sites))) (moveAgain))
+                  (forEach Site (sites) (set State at: (site) 1))
+                )
+                (forEach Site (sites) (set State at: (site) 0))
+              )
+            )
+          )
+        )
+      )
+    )
+    (end (if (is Connected Mover) (result Mover Win)))
+  )
+)

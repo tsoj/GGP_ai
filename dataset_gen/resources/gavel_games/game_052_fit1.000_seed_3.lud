@@ -1,0 +1,72 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (rectangle 7 11))
+      (piece
+        "PIECE_ALPHA"
+        P1
+        (move
+          Step
+          (to
+            if:
+            (not (is Friend (who at: (to))))
+            (apply (if (is Enemy (who at: (to))) (remove (to))))
+          )
+        )
+      )
+      (piece
+        "PIECE_BETA"
+        P2
+        (move
+          Step
+          Adjacent
+          (to
+            if:
+            (and
+              (and
+                (not (is In (to) (sites Top)))
+                (not (is In (to) (sites Bottom)))
+              )
+              (not (is Friend (who at: (to))))
+            )
+            (apply (if (is Enemy (who at: (to))) (remove (to))))
+          )
+        )
+      )
+      (piece
+        "PIECE_GAMMA"
+        P2
+        (move
+          Slide
+          (between
+            if:
+            (and
+              (and
+                (not (is In (to) (sites Top)))
+                (not (is In (to) (sites Bottom)))
+              )
+              (is Empty (to))
+            )
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      (if
+        (or
+          {
+            (is Loop)
+            (is Connected 3 SidesNoCorners)
+            (is Connected 2 Corners)
+          }
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

@@ -1,0 +1,49 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 5)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (or
+        (move
+          Add
+          (to (sites Empty))
+          (then (if (= 1 (count MovesThisTurn)) (moveAgain)))
+        )
+        (if (= 1 (var)) (move Pass))
+      )
+    )
+    (end
+      (if
+        (>=
+          (count Sites in: (sites Board))
+          (max
+            (results
+              from:
+              (difference (sites Board) (sites Group at: (last To)))
+              to:2
+              (*
+                (to)
+                (count
+                  Sites
+                  in:
+                  (intersection
+                    (sites Board)
+                    (sites
+                      Group
+                      at:
+                      (from)
+                      if:
+                      (not (is In (to) (sites Group at: (last To))))
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

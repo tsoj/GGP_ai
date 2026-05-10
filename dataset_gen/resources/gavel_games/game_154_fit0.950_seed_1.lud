@@ -1,0 +1,43 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (tri Hexagon 6) use:Vertex)
+      (piece "PIECE_ALPHA" P1)
+      (piece "PIECE_ALPHA" P2)
+    }
+  )
+  (rules
+    (meta (swap))
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (and
+            (set Score Mover 0)
+            (forEach
+              Group
+              Orthogonal
+              if:
+              (is Mover (who at: (to)))
+              (if
+                (is Odd (count Sites in: (sites)))
+                (and
+                  (addScore Mover -1)
+                  (forEach Site (sites) (set State at: (site) 0))
+                )
+                (and
+                  (addScore Mover -2)
+                  (forEach Site (sites) (set State at: (site) 1))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    (end (if (is Full) (byScore)))
+  )
+)

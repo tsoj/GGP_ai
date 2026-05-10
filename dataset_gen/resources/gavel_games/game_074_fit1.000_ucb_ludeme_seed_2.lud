@@ -1,0 +1,60 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 13) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    phases:
+    {
+      (phase
+        "Opening"
+        (play (move Add (to (sites Empty))))
+        (nextPhase (= 1 (var)) "General")
+      )
+      (phase
+        "General"
+        (play
+          (or
+            (move Add (to (sites Empty)))
+            (move
+              Select
+              (from
+                (sites Occupied by:Enemy)
+                if:
+                (=
+                  (count
+                    Sites
+                    in:
+                    (intersection
+                      (sites Incident Cell of:Cell at: (site))
+                      (sites Occupied by:Mover)
+                    )
+                  )
+                  1
+                )
+              )
+              (then (remove (last To)))
+            )
+          )
+        )
+      )
+    }
+    (end
+      (if
+        (<=
+          2
+          (+
+            {
+              (if (is Line 4 N exact:True) 1 0)
+              (if (is Line 4 NE exact:True) 1 0)
+              (if (is Line 4 E exact:True) 1 0)
+              (if (is Line 4 SE exact:True) 1 0)
+            }
+          )
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

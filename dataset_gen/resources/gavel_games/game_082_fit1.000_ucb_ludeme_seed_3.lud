@@ -1,0 +1,28 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (merge
+          {
+            (scale 2 1 (rectangle 12 2))
+            (shift 2 0 (scale 4 1 (rectangle 12 2)))
+            (shift 6 0 (scale 2 1 (rectangle 12 2)))
+          }
+        )
+      )
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (meta (swap))
+    (play (move Add (to (sites Empty))))
+    (end
+      {
+        (if (is Line 5) (result Mover Win))
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)

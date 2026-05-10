@@ -1,0 +1,31 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 19)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (if
+            (= 1 (count Sites in: (sites Around (last To) Own)))
+            (trigger "Surrounded" Mover)
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (or
+          {
+            (is Loop)
+            (is Connected 3 SidesNoCorners)
+            (is Connected 2 Corners)
+          }
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

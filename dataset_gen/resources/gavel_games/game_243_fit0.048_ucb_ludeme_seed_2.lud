@@ -1,0 +1,31 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 5 diagonals:Alternating) use:Vertex)
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (or
+          (move Step (to if: (is Empty (to))))
+          (move
+            Hop
+            (between if: (is Enemy (who at: (between))) (apply (remove (between))))
+            (to if: (is Empty (to)))
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (sites Phase 1))
+        (place "PIECE_ALPHA2" (sites Phase 0))
+      }
+    )
+    (play (forEach Piece))
+    (end (if (is Line 4 Orthogonal) (result Mover Win)))
+  )
+)

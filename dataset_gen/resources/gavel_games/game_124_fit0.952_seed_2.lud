@@ -1,0 +1,50 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (rectangle 5 6))
+      (hand Each)
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (if
+          (<= (value Player Mover) 0)
+          (move
+            Step
+            Orthogonal
+            (to if: (is Empty (to)))
+            (then
+              (if
+                (is Line 3 Orthogonal)
+                (if
+                  (= (value Player Mover) -1)
+                  (set Value Mover 1)
+                  (set Value Mover (+ (value Player Mover) 1))
+                )
+              )
+            )
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      (if
+        (or
+          {
+            (and
+              (is Connected {(sites Side N) (sites Side S)})
+              (not (can Move (move Add (to (sites Empty)))))
+            )
+            (is Connected 3 Sides)
+            (is Connected 4 Sides)
+          }
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

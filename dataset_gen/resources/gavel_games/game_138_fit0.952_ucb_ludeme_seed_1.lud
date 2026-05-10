@@ -1,0 +1,57 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (add
+          (merge
+            {
+              (square 5 diagonals:Alternating)
+              (shift 0 4 (rotate 180 (wedge 3)))
+              (shift 0 -2 (wedge 3))
+            }
+          )
+          vertices:
+          {
+            {0 5}
+            {5 10}
+            {10 15}
+            {15 20}
+            {20 25}
+            {25 30}
+            {30 35}
+            {35 40}
+            {40 45}
+            {45 50}
+            {50 55}
+            {55 60}
+            {60 65}
+            {65 70}
+            {70 75}
+            {75 80}
+            {80 85}
+            {85 90}
+            {90 95}
+            {95 100}
+          }
+        )
+        use:Vertex
+      )
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (play
+      (move
+        Add
+        (to
+          (sites Empty)
+          if:
+          (and (is Empty (to)) (!= (to) (centrePoint)))
+        )
+      )
+    )
+    (end (if (is Line 4) (result Mover Win)))
+  )
+)

@@ -1,0 +1,30 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 5))
+      (piece "PIECE_ALPHA" P1 (move Slide Orthogonal))
+      (piece
+        "PIECE_BETA"
+        P2
+        (move Step (to if: (not (is Friend (who at: (to))))))
+      )
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (sites Bottom))
+        (place "PIECE_BETA2" (sites Top))
+      }
+    )
+    (play (forEach Piece))
+    (end
+      {
+        (if (is Line 4) (result Mover Win))
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)

@@ -1,0 +1,48 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (merge
+          (shift 0 (/ (- 7 3) 2) (rectangle 3 7 diagonals:Solid))
+          (shift (/ (- 7 4) 2) 0 (rectangle 7 3 diagonals:Solid))
+        )
+        use:Vertex
+      )
+      (piece
+        "PIECE_ALPHA"
+        P1
+        (or
+          (move Step (to if: (is Empty (to))))
+          (move
+            Hop
+            (between if: (is Enemy (who at: (between))) (apply (remove (between))))
+            (to if: (is Empty (to)))
+          )
+        )
+      )
+      (piece
+        "PIECE_BETA"
+        P2
+        N
+        (move
+          Step
+          (directions {Forwards Rightward Leftward})
+          (to if: (is Empty (to)))
+        )
+      )
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      (if
+        (or
+          {(is Loop) (is Connected 3 Sides) (is Connected 4 Sides)}
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

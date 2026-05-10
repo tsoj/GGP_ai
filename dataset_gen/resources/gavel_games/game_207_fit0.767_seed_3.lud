@@ -1,0 +1,95 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (rotate 90 (hex 5))) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (meta (swap))
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (and
+            (set Score Mover 0)
+            (forEach
+              Group
+              Orthogonal
+              if:
+              (is Mover (who at: (to)))
+              (if
+                (is Odd (count Sites in: (sites)))
+                (and
+                  (addScore Mover -1)
+                  (forEach
+                    Site
+                    (sites)
+                    (and (set State at: (site) 1) (set Value at: (site) -1))
+                  )
+                )
+                (forEach Site (sites) (set State at: (site) 0))
+              )
+            )
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (is Full)
+        (byScore
+          {
+            (score
+              P1
+              (+
+                (results
+                  from:
+                  (sites Occupied by:P1)
+                  to:0
+                  (if
+                    (or
+                      {
+                        (is Connected at: (from) {(sites Side N) (sites Side S)})
+                        (is Connected at: (from) {(sites Side NW) (sites Side SE)})
+                        (is Connected at: (from) {(sites Side NE) (sites Side SW)})
+                      }
+                    )
+                    1
+                    -1
+                  )
+                )
+              )
+            )
+            (score
+              P2
+              (+
+                (results
+                  from:
+                  (sites Occupied by:P2)
+                  to:0
+                  (if
+                    (or
+                      {
+                        (is Connected at: (from) {(sites Side N) (sites Side S)})
+                        (is Connected at: (from) {(sites Side NW) (sites Side SE)})
+                        (is
+                          Connected
+                          at:
+                          (from)
+                          {(sites Side NE) (sites Occupied by:Mover)}
+                        )
+                      }
+                    )
+                    1
+                    -1
+                  )
+                )
+              )
+            )
+          }
+        )
+      )
+    )
+  )
+)

@@ -1,0 +1,33 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 13) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play
+      (if
+        (not (is Prev Mover))
+        (move Add (to (sites Empty)))
+        (move
+          Select
+          (from
+            (sites Occupied by:Enemy)
+            if:
+            (<=
+              (count Sites in: (sites Around (from) NotEmpty Orthogonal))
+              1
+            )
+          )
+          (then
+            (and
+              (remove (sites Group at: (last From) Orthogonal))
+              (add (to (last From)))
+            )
+          )
+        )
+      )
+    )
+    (end (if (is Line 5) (result Mover Win)))
+  )
+)

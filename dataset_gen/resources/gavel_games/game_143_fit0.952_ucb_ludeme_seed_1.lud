@@ -1,0 +1,24 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 15) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play
+      (if
+        (= 1 (var))
+        (or
+          (move Swap Players P1 P2)
+          (move Add (to (sites Empty)) (then (set Var 0)))
+        )
+        (move
+          Add
+          (to (sites Empty))
+          (then (if (= 1 (count Moves)) (set Var 1)))
+        )
+      )
+    )
+    (end (if (is Line 5 All exact:True) (result Mover Win)))
+  )
+)

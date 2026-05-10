@@ -42,7 +42,7 @@ LUDII_LIB_JARS = [
 
 DEFAULT_SOURCE_DIRS = [
     LUDII_ROOT / "Common/res/lud/board",
-    PROJECT_ROOT / "gavel/selected_games_cos098",
+    HERE / "resources" / "gavel_games",
 ]
 
 
@@ -173,22 +173,40 @@ def collect_lud_files(sources: list[pathlib.Path]) -> list[pathlib.Path]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out-dir", default=str(PROJECT_ROOT / "dataset"),
-                    help="Output root directory.")
-    ap.add_argument("--num-games", type=int, default=10,
+                    help="Dataset root. Each kept game gets its own "
+                         "subdirectory containing trials.txt with all "
+                         "trials for that game type, delimited by "
+                         "---TRIAL--- markers.")
+    ap.add_argument("--failures-file", default=None,
+                    help="TSV log of skipped games and reasons. "
+                         "Defaults to <out-dir>/failures.tsv.")
+    ap.add_argument("--num-games", type=int, default=50,
                     help="Number of trials to play per .lud file.")
     ap.add_argument("--num-playouts", type=int, default=1000,
                     help="MCTS iterations per move (UCT playouts).")
     ap.add_argument("--max-seconds", type=float, default=-1.0,
                     help="Optional wall-clock cap per move (seconds). "
                          "Negative = no cap (iterations only).")
-    ap.add_argument("--move-limit", type=int, default=1000,
-                    help="Max moves per trial before forced draw.")
+    ap.add_argument("--move-limit", type=int, default=500,
+                    help="Max plies per trial; longer = forced draw.")
+    ap.add_argument("--max-game-seconds", type=float, default=0.5,
+                    help="Skip a game if its first trial takes longer than "
+                         "this (wall clock).")
+    ap.add_argument("--drawish-check-after", type=int, default=50,
+                    help="After this many trials, skip a game if a single "
+                         "outcome dominates (--drawish-threshold).")
+    ap.add_argument("--drawish-threshold", type=float, default=0.9,
+                    help="Outcome dominance fraction at which a game is "
+                         "considered too drawish/biased to keep.")
     ap.add_argument("--opening-max-depth", type=int, default=8,
                     help="Cap on opening depth: random sampler grows the "
                          "opening length until it has enough unique start "
                          "positions, but never beyond this.")
     ap.add_argument("--seed", type=int, default=42,
                     help="Base RNG seed for opening enumeration.")
+    ap.add_argument("--append", action="store_true",
+                    help="Keep existing --out-file / --failures-file and "
+                         "append to them (default: truncate first).")
     ap.add_argument("--source", action="append", type=pathlib.Path, default=None,
                     help="Override source dir/file (repeatable). "
                          "Defaults to the two configured directories.")
@@ -208,15 +226,25 @@ def main() -> int:
         print("No .lud files found.", file=sys.stderr)
         return 2
 
-    print(f"[info] {len(lud_files)} games -> {args.out_dir}")
-    print(f"[info] {args.num_games} trials/game, {args.num_playouts} playouts/move")
+    out_dir = pathlib.Path(args.out_dir).resolve()
+    failures_file = pathlib.Path(
+        args.failures_file if args.failures_file
+        else out_dir / "failures.tsv"
+    ).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    failures_file.parent.mkdir(parents=True, exist_ok=True)
+    if not args.append:
+        # Truncate so a fresh run starts clean. The Java side appends.
+        failures_file.write_text("")
+
+    print(f"[info] {len(lud_files)} games -> {out_dir}")
+    print(f"[info] failures log -> {failures_file}")
+    print(f"[info] {args.num_games} trials/game, {args.num_playouts} playouts/move,"
+          f" move_limit={args.move_limit}, max_game_seconds={args.max_game_seconds}")
 
     out_class_dir = HERE / "build"
     compile_java(out_class_dir, args.ludii_root)
     full_cp = build_runtime_classpath(args.ludii_root, out_class_dir)
-
-    out_dir = pathlib.Path(args.out_dir).resolve()
-    out_dir.mkdir(parents=True, exist_ok=True)
 
     with tempfile.NamedTemporaryFile("w", suffix=".manifest", delete=False) as mf:
         manifest_path = mf.name
@@ -230,10 +258,14 @@ def main() -> int:
             "-cp", full_cp,
             "GenerateDataset",
             "--out-dir", str(out_dir),
+            "--failures-file", str(failures_file),
             "--num-games", str(args.num_games),
             "--num-playouts", str(args.num_playouts),
             "--max-seconds", str(args.max_seconds),
             "--move-limit", str(args.move_limit),
+            "--max-game-seconds", str(args.max_game_seconds),
+            "--drawish-check-after", str(args.drawish_check_after),
+            "--drawish-threshold", str(args.drawish_threshold),
             "--opening-max-depth", str(args.opening_max_depth),
             "--seed", str(args.seed),
             "--manifest", manifest_path,

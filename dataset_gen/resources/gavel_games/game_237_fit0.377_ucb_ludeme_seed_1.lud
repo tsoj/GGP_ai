@@ -1,0 +1,128 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {
+      (board (square 8))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Step
+          (to
+            if:
+            (not (is Friend (who at: (to))))
+            (apply
+              (if
+                (is Enemy (who at: (to)))
+                (remove (to) (then (set Var 1)))
+              )
+            )
+          )
+        )
+      )
+      (piece
+        "PIECE_BETA"
+        Each
+        (move
+          Slide
+          (to
+            if:
+            (is Enemy (who at: (to)))
+            (apply (remove (to) (then (set Var 1))))
+          )
+        )
+      )
+      (piece
+        "PIECE_GAMMA"
+        Each
+        (move
+          Leap
+          {{F F R F} {F F L F}}
+          (to
+            if:
+            (not (is Friend (who at: (to))))
+            (apply
+              (if
+                (is Enemy (who at: (to)))
+                (remove (to) (then (set Var 1)))
+              )
+            )
+          )
+        )
+      )
+      (piece
+        "PIECE_DELTA"
+        Each
+        (move
+          Slide
+          Diagonal
+          (to
+            if:
+            (is Enemy (who at: (to)))
+            (apply (remove (to) (then (set Var 1))))
+          )
+        )
+      )
+      (piece
+        "PIECE_EPSILON"
+        Each
+        (move
+          Slide
+          Orthogonal
+          (to
+            if:
+            (is Enemy (who at: (to)))
+            (apply (remove (to) (then (set Var 1))))
+          )
+        )
+      )
+      (piece
+        "PIECE_ZETA"
+        Each
+        (or
+          {
+            (move Step Forward (to if: (is Empty (to))))
+            (move
+              Step
+              (directions {FR FL})
+              (to
+                if:
+                (is Enemy (who at: (to)))
+                (apply
+                  (if
+                    (is Enemy (who at: (to)))
+                    (remove (to) (then (set Var 1)))
+                  )
+                )
+              )
+            )
+          }
+          (then
+            (if
+              (is In (last To) (sites Mover "Promotion"))
+              (and
+                (promote (last To) (piece "PIECE_ZETA") Mover)
+                (fromTo (from (last To)) (to (last From)))
+              )
+            )
+          )
+        )
+      )
+      (regions "Promotion" P1 (sites Top))
+      (regions "Promotion" P2 (sites Bottom))
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (expand (sites Bottom)))
+        (place "PIECE_ALPHA2" (expand (sites Top)))
+      }
+    )
+    (play (forEach Piece))
+    (end
+      (if (is In (last To) (sites Mover)) (result Mover Win))
+    )
+  )
+)

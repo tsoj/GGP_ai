@@ -1,0 +1,65 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (merge
+          (scale 2 (square 5 diagonals:Alternating))
+          (shift 2 8 (rotate 180 (wedge 3)))
+        )
+        use:Vertex
+      )
+      (piece
+        "PIECE_ALPHA"
+        P1
+        (move
+          Step
+          (to if: (is Empty (to)))
+          (then
+            (intervene
+              (from (last To))
+              (to if: (is Enemy (who at: (to))) (apply (remove (to))))
+            )
+          )
+        )
+      )
+      (piece
+        "PIECE_BETA"
+        P2
+        (move
+          Step
+          (to
+            if:
+            (and
+              (not (is In (to) (expand (sites Top))))
+              (is Empty (to))
+            )
+          )
+          (then
+            (custodial
+              (from (last To))
+              (between if: (is Enemy (who at: (between))) (apply (remove (between))))
+              (to if: (is Friend (who at: (to))))
+            )
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      (if
+        (or
+          {
+            (is Loop)
+            (is Connected 3 SidesNoCorners)
+            (is Connected 2 Corners)
+          }
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

@@ -1,0 +1,27 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {
+      (board (square 10))
+      (piece "PIECE_ALPHA" Each)
+      (regions P1 {(sites Top) (sites Bottom)})
+      (regions P2 {(sites Left) (sites Right)})
+    }
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      (if
+        (or
+          {
+            (is Loop)
+            (is Connected 3 SidesNoCorners)
+            (is Connected 2 Corners)
+          }
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

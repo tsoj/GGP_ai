@@ -1,0 +1,68 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {
+      (board (square 8))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Leap
+          {{F F R F} {F F L F}}
+          forward:True
+          (to
+            if:
+            (not (is Friend (who at: (to))))
+            (apply (remove (to)))
+          )
+        )
+      )
+      (piece
+        "PIECE_BETA"
+        Each
+        (move
+          Slide
+          Diagonal
+          (to if: (is Enemy (who at: (to))) (apply (remove (to))))
+        )
+      )
+      (piece
+        "PIECE_GAMMA"
+        Each
+        (move
+          Hop
+          Diagonal
+          (between if:True)
+          (to
+            if:
+            (not (is Friend (who at: (to))))
+            (apply (remove (to)))
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_GAMMA1" coord: "E1")
+        (place "PIECE_BETA1" coord: "D1")
+        (place "PIECE_ALPHA1" coord: "C1")
+        (place "PIECE_GAMMA2" coord: "E8")
+        (place "PIECE_BETA2" coord: "F8")
+        (place "PIECE_ALPHA2" coord: "G8")
+      }
+    )
+    (play (forEach Piece))
+    (end
+      {
+        (if
+          (or (is In (last To) (sites Mover)) (no Pieces Next))
+          (result Mover Win)
+        )
+        (if (no Moves Next) (result Mover Win))
+      }
+    )
+  )
+)

@@ -1,0 +1,43 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (remove
+          (merge
+            (shift
+              0
+              (/ (- 7 3) 2)
+              (rectangle 3 7 diagonals:Alternating)
+            )
+            (shift
+              (/ (- 7 3) 2)
+              0
+              (rectangle 7 3 diagonals:Alternating)
+            )
+          )
+          edges:
+          {{17 10} {9 10} {10 11}}
+        )
+        use:Vertex
+      )
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (and
+            (if (not (is Prev Mover)) (moveAgain))
+            (if (is Line 4 All) (moveAgain))
+          )
+        )
+      )
+    )
+    (end (if (is Line 5 All exact:True) (result Mover Win)))
+  )
+)

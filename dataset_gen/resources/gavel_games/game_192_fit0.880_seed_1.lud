@@ -1,0 +1,102 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 7))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (or
+          (move
+            (from)
+            (to (sites Around (from)) if: (is Empty (to)))
+            copy:True
+          )
+          (move
+            (from)
+            (to
+              (difference
+                (expand origin: (from) steps:2)
+                (expand origin: (from))
+              )
+              if:
+              (is Empty (to))
+            )
+          )
+          (then
+            (forEach
+              Site
+              (intersection (sites Around (last To)) (sites Occupied by:Next))
+              (and
+                (remove (site))
+                (add (piece (id "PIECE_ALPHA" Mover)) (to (site)))
+              )
+            )
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (start
+      {
+        (set Score Each 2)
+        (place "PIECE_ALPHA1" {"A1" "G7"})
+        (place "PIECE_ALPHA2" {"A7" "G1"})
+      }
+    )
+    (play
+      (forEach
+        Piece
+        (then
+          (and
+            (set
+              Score
+              Mover
+              (/
+                (+
+                  (results
+                    from:
+                    (sites Occupied by:Mover)
+                    to:
+                    (sites Around (from) if: (is Mover (who at: (to))))
+                    1
+                  )
+                )
+                2
+              )
+            )
+            (set
+              Score
+              Next
+              (/
+                (+
+                  (results
+                    from:
+                    (sites Occupied by:Next)
+                    to:
+                    (sites Around (from) if: (is Next (who at: (to))))
+                    1
+                  )
+                )
+                2
+              )
+            )
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (no Moves Next)
+        (byScore
+          {
+            (score P1 (+ (score P1) (size Territory P1)))
+            (score P2 (+ (score P2) (size Territory P2)))
+          }
+        )
+      )
+    )
+  )
+)

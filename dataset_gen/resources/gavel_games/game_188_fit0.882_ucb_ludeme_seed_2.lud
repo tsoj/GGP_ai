@@ -1,0 +1,85 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 13) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    phases:
+    {
+      (phase
+        "Opening"
+        (play (move Add (to (sites Empty))))
+        (nextPhase "General")
+      )
+      (phase
+        "General"
+        (play
+          (if
+            (is Prev Mover)
+            (if
+              (= 0 (count MovesThisTurn))
+              (move Remove (sites Occupied by:Next) (then (moveAgain)))
+              (move Add (to (sites Empty)))
+            )
+            (move
+              Add
+              (to
+                (sites Empty)
+                if:
+                (>
+                  Infinity
+                  (count
+                    Steps
+                    Orthogonal
+                    (step
+                      (to
+                        if:
+                        (or (is Empty (to)) (is In (to) (sites Occupied by:Mover)))
+                      )
+                    )
+                    (to)
+                    (sites Occupied by:Mover)
+                  )
+                )
+              )
+            )
+            (then
+              (if
+                (>=
+                  2
+                  (count
+                    Sites
+                    in:
+                    (forEach
+                      (sites LineOfSight at: (last To) Orthogonal)
+                      if:
+                      (is Enemy (who at: (site)))
+                    )
+                  )
+                )
+                (trigger "CaptureMade" Mover)
+              )
+            )
+          )
+        )
+      )
+    }
+    (end
+      (if
+        (<=
+          2
+          (+
+            {
+              (if (is Line 4 N exact:True) 1 0)
+              (if (is Line 4 NE exact:True) 1 0)
+              (if (is Line 4 E exact:True) 1 0)
+              (if (is Line 4 SE exact:True) 1 0)
+            }
+          )
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

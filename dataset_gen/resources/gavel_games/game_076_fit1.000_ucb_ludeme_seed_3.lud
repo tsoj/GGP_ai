@@ -1,0 +1,35 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 10))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Step
+          Orthogonal
+          (to (apply (remove (sites Around (to) All))))
+          (then
+            (add (piece (id "PIECE_BETA" Mover)) (to (last From)))
+          )
+        )
+      )
+      (piece "PIECE_BETA" Each)
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (sites Phase 1))
+        (place
+          "PIECE_ALPHA2"
+          (difference (sites Phase 0) (sites Centre))
+        )
+      }
+    )
+    (play (forEach Piece))
+    (end (if (no Moves Next) (result Next Win)))
+  )
+)

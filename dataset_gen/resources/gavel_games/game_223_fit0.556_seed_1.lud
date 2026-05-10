@@ -1,0 +1,29 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (rectangle 5 5 diagonals:Alternating) use:Vertex)
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (meta (swap))
+    (play
+      (move
+        Add
+        (to
+          (sites Empty)
+          if:
+          (not (is In (to) (sites Around (last To))))
+        )
+      )
+    )
+    (end
+      {
+        (if (is Line 4) (result Mover Win))
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)

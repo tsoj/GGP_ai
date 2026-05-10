@@ -1,0 +1,37 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 13) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play
+      (move
+        Add
+        (to
+          (sites Empty)
+          if:
+          (>
+            (count Steps All (to) (sites Perimeter))
+            (count
+              Sites
+              in:
+              (intersection
+                (sites LineOfSight at: (to) All)
+                (sites Occupied by:Mover)
+              )
+            )
+          )
+        )
+        (then
+          (enclose
+            (from (last To))
+            Orthogonal
+            (between if: (is Enemy (who at: (between))) (apply (remove (between))))
+          )
+        )
+      )
+    )
+    (end (if (is Line 5) (result Mover Win)))
+  )
+)

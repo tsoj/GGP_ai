@@ -1,0 +1,76 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 7))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (or
+          (move
+            (from)
+            (to (sites Around (from)) if: (is Empty (to)))
+            copy:True
+          )
+          (move
+            (from)
+            (to
+              (difference
+                (expand origin: (from) steps:2)
+                (expand origin: (from))
+              )
+              if:
+              (is Empty (to))
+            )
+          )
+          (then
+            (if
+              (=
+                1
+                (count
+                  Sites
+                  in:
+                  (forEach
+                    (sites Occupied by:Mover)
+                    if:
+                    (<=
+                      2
+                      (count
+                        Sites
+                        in:
+                        (intersection (sites Around (site)) (sites Occupied by:Mover))
+                      )
+                    )
+                  )
+                )
+              )
+              (trigger "PlayerTurn" Mover)
+            )
+          )
+        )
+      )
+    }
+  )
+  (rules
+    (start
+      {
+        (set Score Each 2)
+        (place "PIECE_ALPHA1" {"A1" "G7"})
+        (place "PIECE_ALPHA2" {"A7" "G1"})
+      }
+    )
+    (play
+      (forEach
+        Piece
+        (then
+          (and
+            (set Score P1 (count Sites in: (sites Occupied by:P1)))
+            (set Score P2 (count Sites in: (sites Occupied by:P2)))
+          )
+        )
+      )
+    )
+    (end (if (or (is Decided "Draw") (is Full)) (byScore)))
+  )
+)

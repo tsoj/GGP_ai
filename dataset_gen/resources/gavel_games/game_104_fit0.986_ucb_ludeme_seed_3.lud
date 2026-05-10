@@ -1,0 +1,47 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (square 10))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Step
+          Orthogonal
+          (to (apply (remove (sites Around (to) All))))
+          (then
+            (custodial
+              (from (last To))
+              Orthogonal
+              (between
+                (max 1)
+                if:
+                (is Enemy (who at: (between)))
+                (apply (remove (sites Around (between) All)))
+              )
+              (to if: (is Friend (who at: (to))))
+            )
+          )
+        )
+      )
+      (piece "PIECE_BETA" Each)
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (sites Phase 1))
+        (place
+          "PIECE_ALPHA2"
+          (difference (sites Phase 0) (sites Centre))
+        )
+      }
+    )
+    (play (forEach Piece))
+    (end
+      (if (and (no Moves P1) (no Moves P2)) (result Next Win))
+    )
+  )
+)

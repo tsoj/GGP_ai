@@ -1,0 +1,11 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {(board (square 7)) (piece "PIECE_ALPHA" P1) (piece "PIECE_BETA" P2)}
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end (if (is Line 4) (result Mover Win)))
+  )
+)

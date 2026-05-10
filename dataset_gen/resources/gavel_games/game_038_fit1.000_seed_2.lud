@@ -1,0 +1,15 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (rectangle 3 3 diagonals:Alternating))
+      (piece "PIECE_ALPHA" Neutral)
+      (tile "L" Each {{L F R F F} {R F L F F}})
+    }
+  )
+  (rules
+    (play (move Add (piece "PIECE_ALPHA0") (to (sites Empty))))
+    (end (if (is Line 3) (result Mover Win)))
+  )
+)

@@ -1,0 +1,39 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board
+        (square 13)
+        {
+          (track "Track1" "62,W,N1,E,N1,W,N1,E,S1,W,S1,E" loop:True P1)
+          (track "Track2" "19,E,S1,W,S1,E,S1,W,N1,E,N1,W" loop:True P2)
+        }
+      )
+      (piece "PIECE_ALPHA" Each)
+    }
+  )
+  (rules
+    (play
+      (move
+        Add
+        (to
+          (sites Empty)
+          if:
+          (<=
+            (count Steps All (to) (sites Perimeter))
+            (count
+              Sites
+              in:
+              (intersection
+                (sites LineOfSight at: (to) All)
+                (sites Occupied by:Mover)
+              )
+            )
+          )
+        )
+      )
+    )
+    (end (if (is Line 4) (result Mover Win)))
+  )
+)

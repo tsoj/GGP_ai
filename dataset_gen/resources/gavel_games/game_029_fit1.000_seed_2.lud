@@ -1,0 +1,18 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {(board (square 13) use:Vertex) (piece "PIECE_ALPHA" Each)}
+  )
+  (rules
+    (play (move Add (to (sites Empty))))
+    (end
+      (if
+        (or
+          {(is Loop) (is Connected 3 Sides) (is Connected 4 Sides)}
+        )
+        (result Mover Win)
+      )
+    )
+  )
+)

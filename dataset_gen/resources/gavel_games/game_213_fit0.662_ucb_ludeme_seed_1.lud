@@ -1,0 +1,42 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 6)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (or
+        (move Add (to (sites Empty) if: (is Flat)))
+        (move
+          Add
+          (to (sites Empty) if: (is Flat))
+          (then
+            (and
+              (addScore Mover 1)
+              (if
+                (< 2 (count Sites in: (sites Occupied by:Mover top:True)))
+                (moveAgain)
+              )
+            )
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (is Full)
+        (byScore
+          {
+            (score
+              P1
+              (* 10 (count Sites in: (sites Occupied by:P1 top:True)))
+            )
+            (score
+              P2
+              (* 10 (count Sites in: (sites Occupied by:P2 top:True)))
+            )
+          }
+        )
+      )
+    )
+  )
+)

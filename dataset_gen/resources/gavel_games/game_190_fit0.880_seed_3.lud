@@ -1,0 +1,34 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 7)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (play
+      (move
+        Add
+        (to
+          (forEach
+            (sites Empty)
+            if:
+            (if
+              (is In (site) (union (sites Board) (sites Centre)))
+              (all Sites (sites Around (site) NotEmpty) if: (is Friend (who at: (site))))
+              (no
+                Pieces
+                Mover
+                in:
+                (difference (sites Around (site) Adjacent) (sites Centre))
+              )
+            )
+          )
+        )
+      )
+    )
+    (end
+      (if
+        (or {(is Loop) (no Moves Next) (is Connected 2 Corners)})
+        (result Mover Win)
+      )
+    )
+  )
+)

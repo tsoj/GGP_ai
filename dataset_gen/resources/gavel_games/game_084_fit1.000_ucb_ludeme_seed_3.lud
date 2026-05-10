@@ -1,0 +1,32 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment
+    {
+      (board (tiling T33434 3) use:Vertex)
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (move
+          Step
+          Orthogonal
+          (to (apply (remove (sites Around (to) All))))
+          (then
+            (add (piece (id "PIECE_BETA" Mover)) (to (last From)))
+          )
+        )
+      )
+      (piece "PIECE_BETA" Each)
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (sites Phase 1))
+        (place "PIECE_ALPHA2" (sites Phase 0))
+      }
+    )
+    (play (forEach Piece))
+    (end (if (no Moves Next) (result Next Loss)))
+  )
+)

@@ -1,0 +1,44 @@
+(game
+  "GAME_NAME"
+  (players {(player N) (player S)})
+  (equipment
+    {
+      (board (square 8))
+      (piece
+        "PIECE_ALPHA"
+        Each
+        (or
+          {
+            (move Step Forward (to if: (is Empty (to))))
+            (move
+              Step
+              (directions {FR FL})
+              (to
+                if:
+                (or (is Empty (to)) (is Enemy (who at: (to))))
+                (apply (if (is Enemy (who at: (to))) (remove (to))))
+              )
+            )
+          }
+        )
+      )
+      (regions P1 (sites Top))
+      (regions P2 (sites Bottom))
+    }
+  )
+  (rules
+    (start
+      {
+        (place "PIECE_ALPHA1" (expand (sites Bottom)))
+        (place "PIECE_ALPHA2" (expand (sites Top)))
+      }
+    )
+    (play (forEach Piece))
+    (end
+      (if
+        (or (is In (last To) (sites Mover)) (no Pieces Next))
+        (result Mover Win)
+      )
+    )
+  )
+)

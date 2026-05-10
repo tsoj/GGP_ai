@@ -1,0 +1,65 @@
+(game
+  "GAME_NAME"
+  (players 2)
+  (equipment {(board (square 5)) (piece "PIECE_ALPHA" Each)})
+  (rules
+    (meta (swap))
+    (play
+      (move
+        Add
+        (to (sites Empty))
+        (then
+          (and
+            (set Score Mover 0)
+            (forEach
+              Group
+              Orthogonal
+              if:
+              (is Mover (who at: (to)))
+              (if
+                (is Odd (count Sites in: (sites)))
+                (and
+                  (addScore Mover -1)
+                  (forEach Site (sites) (set State at: (site) 1))
+                )
+                (forEach Site (sites) (set State at: (site) 0))
+              )
+            )
+          )
+        )
+      )
+    )
+    (end
+      {
+        (if
+          (=
+            (count Sites in: (sites Board))
+            (max
+              (results
+                from:
+                (difference (sites Board) (sites Group at: (last To)))
+                to:2
+                (count
+                  Sites
+                  in:
+                  (intersection
+                    (sites Board)
+                    (sites
+                      Group
+                      at:
+                      (from)
+                      if:
+                      (not (is In (to) (sites Group at: (last To))))
+                    )
+                  )
+                )
+              )
+            )
+          )
+          (result Mover Win)
+        )
+        (if (is Line 3) (result Mover Loss))
+      }
+    )
+  )
+)
