@@ -1,0 +1,10 @@
+{
+  "file_types": {
+    "Clojure": ["lud"]
+  },
+  "languages": {
+    "Clojure": {
+      "enable_language_server": false
+    }
+  }
+}
