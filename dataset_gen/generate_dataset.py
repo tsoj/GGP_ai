@@ -189,7 +189,7 @@ def main() -> int:
                          "Negative = no cap (iterations only).")
     ap.add_argument("--move-limit", type=int, default=500,
                     help="Max plies per trial; longer = forced draw.")
-    ap.add_argument("--max-game-seconds", type=float, default=0.5,
+    ap.add_argument("--max-game-seconds", type=float, default=0.3,
                     help="Skip a game if its first trial takes longer than "
                          "this (wall clock).")
     ap.add_argument("--drawish-check-after", type=int, default=50,
