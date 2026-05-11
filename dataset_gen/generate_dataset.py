@@ -198,7 +198,7 @@ def main() -> int:
     ap.add_argument("--drawish-threshold", type=float, default=0.9,
                     help="Outcome dominance fraction at which a game is "
                          "considered too drawish/biased to keep.")
-    ap.add_argument("--opening-max-depth", type=int, default=8,
+    ap.add_argument("--opening-max-depth", type=int, default=250,
                     help="Cap on opening depth: random sampler grows the "
                          "opening length until it has enough unique start "
                          "positions, but never beyond this.")

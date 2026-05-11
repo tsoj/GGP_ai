@@ -81,7 +81,7 @@ public class GenerateDataset
         double maxGameSeconds = 0.5;
         int drawishCheckAfter = 50;
         double drawishThreshold = 0.9;
-        int openingMaxDepth = 8;
+        int openingMaxDepth = 250;
         long baseSeed = 42L;
         int threads = Runtime.getRuntime().availableProcessors();
         boolean verbose = false;
