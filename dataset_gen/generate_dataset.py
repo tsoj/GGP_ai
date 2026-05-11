@@ -2,10 +2,11 @@
 """Generate a UCT self-play trial dataset for every .lud file in the
 configured source directories.
 
-Each game gets its own subdirectory under --out-dir containing trial_*.txt
-files (Ludii's native trial format). A trial replays deterministically
-given the original .lud and the saved RNG state, so it captures the full
-sequence of moves needed later for position/outcome supervision.
+Each kept game writes a single <gameId>.txt file under --out-dir with all
+trials concatenated, delimited by ---TRIAL--- markers. A trial replays
+deterministically given the original .lud and the saved RNG state, so it
+captures the full sequence of moves needed later for position/outcome
+supervision.
 """
 from __future__ import annotations
 
@@ -173,10 +174,9 @@ def collect_lud_files(sources: list[pathlib.Path]) -> list[pathlib.Path]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out-dir", default=str(PROJECT_ROOT / "dataset"),
-                    help="Dataset root. Each kept game gets its own "
-                         "subdirectory containing trials.txt with all "
-                         "trials for that game type, delimited by "
-                         "---TRIAL--- markers.")
+                    help="Dataset root. Each kept game writes a single "
+                         "<gameId>.txt file containing all trials for that "
+                         "game type, delimited by ---TRIAL--- markers.")
     ap.add_argument("--failures-file", default=None,
                     help="TSV log of skipped games and reasons. "
                          "Defaults to <out-dir>/failures.tsv.")
@@ -190,8 +190,8 @@ def main() -> int:
     ap.add_argument("--move-limit", type=int, default=500,
                     help="Max plies per trial; longer = forced draw.")
     ap.add_argument("--max-game-seconds", type=float, default=0.3,
-                    help="Skip a game if its first trial takes longer than "
-                         "this (wall clock).")
+                    help="Skip a game if at any point the average trial "
+                         "length grows above this limit (wall clock).")
     ap.add_argument("--drawish-check-after", type=int, default=50,
                     help="After this many trials, skip a game if a single "
                          "outcome dominates (--drawish-threshold).")

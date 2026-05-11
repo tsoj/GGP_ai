@@ -41,21 +41,22 @@ import search.mcts.MCTS;
  *  - UCT does not support the game
  *  - the opening generator can't produce the requested number of unique
  *    starting positions
- *  - the very first trial takes longer than --max-game-seconds
+ *  - the running average trial wall-clock exceeds --max-game-seconds
  *  - after --drawish-check-after games one outcome dominates
  *    (>= --drawish-threshold of trials)
  *  - any playout crashes
  *
  * Args:
- *   --out-dir <dir>              Dataset root. Each kept game gets its own
- *                                subdirectory containing trials.txt with
- *                                all trials for that game.
+ *   --out-dir <dir>              Dataset root. Each kept game writes a
+ *                                single &lt;gameId&gt;.txt file with all
+ *                                trials for that game.
  *   --failures-file <path>       Skipped-games log (default: failures.tsv).
  *   --num-games <int>            Trials per .lud (default: 50).
  *   --num-playouts <int>         MCTS iterations per move (default: 1000).
  *   --max-seconds <float>        Wall-clock cap per move (default: no cap).
  *   --move-limit <int>           Max plies per trial; longer = draw (default: 500).
- *   --max-game-seconds <float>   Skip game if first trial exceeds this (default: 0.5).
+ *   --max-game-seconds <float>   Skip game once mean trial wall-clock
+ *                                exceeds this (default: 0.5).
  *   --drawish-check-after <int>  Run drawish check after this many trials (default: 50).
  *   --drawish-threshold <float>  Skip game if dominant outcome >= this (default: 0.9).
  *   --opening-max-depth <int>    Cap for opening enumeration (default: 8).
@@ -268,6 +269,7 @@ public class GenerateDataset
         // if it's later flagged as too slow / too drawish / crashing.
         final List<String> pendingRecords = new ArrayList<>(numGames);
         final Map<String, Integer> outcomeCounts = new HashMap<>();
+        double totalElapsed = 0.0;
 
         for (int g = 0; g < openings.size(); g++)
         {
@@ -334,15 +336,19 @@ public class GenerateDataset
             final double elapsed = (System.nanoTime() - t0) / 1e9;
             closeAll(ais);
 
-            // First-trial wall-clock cutoff.
-            if (g == 0 && elapsed > maxGameSeconds)
+            // Running-average wall-clock cutoff: bail out as soon as the
+            // mean trial time grows past the limit.
+            totalElapsed += elapsed;
+            final int playedSoFar = g + 1;
+            final double meanElapsed = totalElapsed / playedSoFar;
+            if (meanElapsed > maxGameSeconds)
             {
                 logFailure(failuresOut, ludPath, "too_slow",
-                    String.format("first_trial_seconds=%.3f limit=%.3f",
-                        elapsed, maxGameSeconds));
+                    String.format("mean_trial_seconds=%.3f after=%d limit=%.3f",
+                        meanElapsed, playedSoFar, maxGameSeconds));
                 log.append("[skip] ").append(gameId).append(
-                    String.format(": first trial took %.3fs (> %.3f)%n",
-                        elapsed, maxGameSeconds));
+                    String.format(": mean trial took %.3fs after %d trials (> %.3f)%n",
+                        meanElapsed, playedSoFar, maxGameSeconds));
                 return;
             }
 
@@ -386,10 +392,8 @@ public class GenerateDataset
             }
         }
 
-        // All trials passed: commit to <outDir>/<gameId>/trials.txt.
-        final File gameDir = new File(outDir, gameId);
-        gameDir.mkdirs();
-        final File trialsFile = new File(gameDir, "trials.txt");
+        // All trials passed: commit to <outDir>/<gameId>.txt.
+        final File trialsFile = new File(outDir, gameId + ".txt");
         try (PrintWriter w = new PrintWriter(new FileWriter(trialsFile)))
         {
             w.println("PATH=" + ludFile.getAbsolutePath());
