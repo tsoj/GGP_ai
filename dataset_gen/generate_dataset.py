@@ -179,7 +179,7 @@ def main() -> int:
                          "game type, delimited by ---TRIAL--- markers.")
     ap.add_argument("--failures-file", default=None,
                     help="TSV log of skipped games and reasons. "
-                         "Defaults to <out-dir>/failures.tsv.")
+                         "Defaults to <out-dir>/logs/failures.tsv.")
     ap.add_argument("--num-games", type=int, default=50,
                     help="Number of trials to play per .lud file.")
     ap.add_argument("--num-playouts", type=int, default=1000,
@@ -235,7 +235,7 @@ def main() -> int:
     out_dir = pathlib.Path(args.out_dir).resolve()
     failures_file = pathlib.Path(
         args.failures_file if args.failures_file
-        else out_dir / "failures.tsv"
+        else out_dir / "logs" / "failures.tsv"
     ).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     failures_file.parent.mkdir(parents=True, exist_ok=True)
