@@ -173,6 +173,7 @@ public final class PositionSerializer
 
         final ContainerState cs = ctx.state().containerStates()[0];
 
+        // Bounding box.
         double xmin = Double.POSITIVE_INFINITY, xmax = Double.NEGATIVE_INFINITY;
         double ymin = Double.POSITIVE_INFINITY, ymax = Double.NEGATIVE_INFINITY;
         for (final TopologyElement el : sites)
@@ -181,50 +182,203 @@ public final class PositionSerializer
             xmin = Math.min(xmin, c.getX()); xmax = Math.max(xmax, c.getX());
             ymin = Math.min(ymin, c.getY()); ymax = Math.max(ymax, c.getY());
         }
-        // Quantize independently per axis so hex rows (vertical spacing
-        // sqrt(3)/2 ≈ 0.866 of the horizontal spacing) keep their row
-        // count intact and stay top-bottom symmetric.
-        final double ux = axisUnit(sites, true);
-        final double uy = axisUnit(sites, false);
-        if (ux <= 0 || uy <= 0)
-            throw new IllegalStateException("could not determine site spacing");
-        final int cols = (int) Math.round((xmax - xmin) / ux) + 1;
-        final int rows = (int) Math.round((ymax - ymin) / uy) + 1;
-        if ((long) cols * rows > 200_000)
-            throw new IllegalStateException(
-                "ASCII grid too large: " + cols + "x" + rows
-                + " (sites=" + sites.size() + ", ux=" + ux + ", uy=" + uy + ")");
-        // Two characters per cell: glyph + depth-digit (or space). Cells
-        // separated by one space => textCols = cols * 3 - 1.
-        final int textCols = Math.max(1, cols * 3 - 1);
-        final char[][] grid = new char[rows][textCols];
-        for (int r = 0; r < rows; r++) Arrays.fill(grid[r], OFFBOARD);
 
+        // Row spacing first: median nonzero y-gap across all sites.
+        final double uy = axisUnit(sites, false);
+        if (uy <= 0) throw new IllegalStateException("could not determine row spacing");
+        final double yTol = uy * 0.4;
+
+        // Group sites into y-buckets ordered top-to-bottom (high y first).
+        final TreeMap<Long, java.util.List<TopologyElement>> rowBuckets =
+            new TreeMap<>(java.util.Comparator.reverseOrder());
         for (final TopologyElement el : sites)
         {
-            final Point2D c = el.centroid();
-            final int col = (int) Math.round((c.getX() - xmin) / ux);
-            final int row = rows - 1 - (int) Math.round((c.getY() - ymin) / uy);
-            final int tc = col * 3;
-            if (row < 0 || row >= rows || tc < 0 || tc + 1 >= textCols) continue;
-            final int idx = el.index();
-            final int who = cs.who(idx, siteType);
-            if (who <= 0)
+            final long bucket = Math.round((el.centroid().getY() - ymin) / uy);
+            rowBuckets.computeIfAbsent(bucket, k -> new java.util.ArrayList<>()).add(el);
+        }
+
+        // Column spacing: median of *within-row* x-gaps. This treats the
+        // half-step between hex rows as a row offset (rendered as half-cell
+        // indent) rather than as a column of its own.
+        final double ux = withinRowUx(rowBuckets);
+        if (ux <= 0) throw new IllegalStateException("could not determine column spacing");
+
+        // Detect whether any site in the current position has stack depth
+        // or count > 1; if not, use 2-char cells (glyph + sep) instead of
+        // 3-char (glyph + depth-digit + sep) to keep wide boards compact.
+        final boolean hasDepth = anyDepth(ctx);
+        final int glyphSlots = hasDepth ? 2 : 1; // chars at cell start
+        // Render with two text columns per cell unit so half-cell offsets
+        // (hex rows) can shift by one char without overlap.
+        final int textColsPerCell = 2 * glyphSlots;
+
+        // Compute per-row indent in text chars from each row's leftmost x.
+        // Row width = (cell count - 1) * textColsPerCell + glyphSlots.
+        // Sparsity check uses total board sites vs. text grid area.
+        int globalWidth = 0;
+        final int rows = rowBuckets.size();
+        final int[] rowIndent = new int[rows];
+        final int[] rowEnd = new int[rows];
+        int rIdx = 0;
+        for (final java.util.List<TopologyElement> bucket : rowBuckets.values())
+        {
+            double rowXmin = Double.POSITIVE_INFINITY, rowXmax = Double.NEGATIVE_INFINITY;
+            for (final TopologyElement el : bucket)
             {
-                grid[row][tc] = EMPTY;
-                grid[row][tc + 1] = STACK_PAD;
-                continue;
+                final double x = el.centroid().getX();
+                if (x < rowXmin) rowXmin = x;
+                if (x > rowXmax) rowXmax = x;
             }
-            grid[row][tc] = pickGlyph(gm, cs, idx, siteType);
-            grid[row][tc + 1] = depthChar(cs, idx, siteType);
+            final int indent = (int) Math.round((rowXmin - xmin) / ux * textColsPerCell);
+            final int end = (int) Math.round((rowXmax - xmin) / ux * textColsPerCell) + glyphSlots;
+            rowIndent[rIdx] = indent;
+            rowEnd[rIdx]   = end;
+            if (end > globalWidth) globalWidth = end;
+            rIdx++;
+        }
+
+        if ((long) globalWidth * rows > 200_000)
+            throw new IllegalStateException(
+                "ASCII grid too large: " + globalWidth + "x" + rows
+                + " (sites=" + sites.size() + ", ux=" + ux + ", uy=" + uy + ")");
+
+        // Detect non-grid layouts (spiral, fractal, scattered): when the
+        // average row has fewer than two sites, the y-axis isn't really
+        // "rows" — it's just a continuous coordinate. The grid would be
+        // mostly whitespace and wouldn't communicate spatial structure.
+        // Emit a compact occupied-site listing instead.
+        final double sitesPerRow = sites.size() / Math.max(1.0, (double) rows);
+        if (sitesPerRow < 2.0 && rows >= 8)
+        {
+            appendCompact(out, ctx, gm, sites, siteType, cs);
+            return;
+        }
+
+        final char[][] grid = new char[rows][Math.max(1, globalWidth)];
+        for (int r = 0; r < rows; r++) Arrays.fill(grid[r], OFFBOARD);
+
+        rIdx = 0;
+        for (final java.util.List<TopologyElement> bucket : rowBuckets.values())
+        {
+            final int baseIndent = rowIndent[rIdx++];
+            final double rowXmin;
+            {
+                double m = Double.POSITIVE_INFINITY;
+                for (final TopologyElement el : bucket) m = Math.min(m, el.centroid().getX());
+                rowXmin = m;
+            }
+            // Find this bucket's grid row index. rowBuckets iterates
+            // reverse-y; we want top row at grid[0].
+            final int row = rIdx - 1;
+            for (final TopologyElement el : bucket)
+            {
+                final double x = el.centroid().getX();
+                final int cellIdx = (int) Math.round((x - rowXmin) / ux);
+                final int tc = baseIndent + cellIdx * textColsPerCell;
+                if (tc < 0 || tc + glyphSlots > grid[row].length) continue;
+                final int idx = el.index();
+                final int who = cs.who(idx, siteType);
+                if (who <= 0)
+                {
+                    grid[row][tc] = EMPTY;
+                    if (hasDepth) grid[row][tc + 1] = STACK_PAD;
+                }
+                else
+                {
+                    grid[row][tc] = pickGlyph(gm, cs, idx, siteType);
+                    if (hasDepth) grid[row][tc + 1] = depthChar(cs, idx, siteType);
+                }
+            }
         }
         for (int r = 0; r < rows; r++)
         {
-            // Trim trailing spaces to keep lines tight.
-            int end = textCols;
+            int end = grid[r].length;
             while (end > 0 && grid[r][end - 1] == OFFBOARD) end--;
             out.append(new String(grid[r], 0, end)).append('\n');
         }
+    }
+
+    private static void appendCompact(
+        final StringBuilder out, final Context ctx, final GlyphMap gm,
+        final List<? extends TopologyElement> sites, final SiteType siteType,
+        final ContainerState cs)
+    {
+        out.append("[irregular layout — occupied sites listed; full geometry in FACTS]\n");
+        final java.util.List<String> entries = new java.util.ArrayList<>();
+        for (final TopologyElement el : sites)
+        {
+            final int idx = el.index();
+            final int who = cs.who(idx, siteType);
+            if (who <= 0) continue;
+            final char g = pickGlyph(gm, cs, idx, siteType);
+            final int depth = Math.max(cs.sizeStack(idx, siteType), cs.count(idx, siteType));
+            final String tag = depth > 1 ? (g + Integer.toString(depth)) : Character.toString(g);
+            entries.add(el.label() + ":" + tag);
+        }
+        entries.sort(String::compareTo);
+        if (entries.isEmpty())
+        {
+            out.append("(empty)\n");
+            return;
+        }
+        // Wrap at ~80 chars for readability.
+        int lineLen = 0;
+        for (int i = 0; i < entries.size(); i++)
+        {
+            final String e = entries.get(i);
+            if (lineLen > 0 && lineLen + 2 + e.length() > 80)
+            {
+                out.append('\n');
+                lineLen = 0;
+            }
+            if (lineLen > 0) { out.append("  "); lineLen += 2; }
+            out.append(e);
+            lineLen += e.length();
+        }
+        out.append('\n');
+    }
+
+    private static double withinRowUx(
+        final java.util.SortedMap<Long, java.util.List<TopologyElement>> rowBuckets)
+    {
+        final java.util.ArrayList<Double> gaps = new java.util.ArrayList<>();
+        for (final java.util.List<TopologyElement> bucket : rowBuckets.values())
+        {
+            if (bucket.size() < 2) continue;
+            final double[] xs = new double[bucket.size()];
+            for (int i = 0; i < bucket.size(); i++) xs[i] = bucket.get(i).centroid().getX();
+            Arrays.sort(xs);
+            for (int i = 1; i < xs.length; i++)
+            {
+                final double d = xs[i] - xs[i - 1];
+                if (d > 1e-9) gaps.add(d);
+            }
+        }
+        if (gaps.isEmpty())
+        {
+            // Fall back to overall median x-gap if no row has >= 2 sites.
+            return Math.max(1.0, 0.0);
+        }
+        java.util.Collections.sort(gaps);
+        return gaps.get(gaps.size() / 2);
+    }
+
+    private static boolean anyDepth(final Context ctx)
+    {
+        final ContainerState[] cstates = ctx.state().containerStates();
+        final Container[] containers = ctx.containers();
+        for (int ci = 0; ci < containers.length; ci++)
+        {
+            final SiteType st = containers[ci].defaultSite();
+            final ContainerState cs = cstates[ci];
+            for (final TopologyElement el : siteElements(ctx.game(), containers[ci], st))
+            {
+                final int idx = el.index();
+                if (cs.sizeStack(idx, st) > 1) return true;
+                if (cs.count(idx, st) > 1) return true;
+            }
+        }
+        return false;
     }
 
     private static char pickGlyph(
