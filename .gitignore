@@ -16,3 +16,11 @@ __pycache__/
 /position_text/build/
 /position_text/scan.tsv
 /position_text/samples/
+
+# embeddings build + outputs
+/embeddings/build/
+/embeddings/out/
+/embeddings/out_test/
+
+# uv / venv
+/.venv/

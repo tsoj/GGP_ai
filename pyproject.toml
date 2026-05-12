@@ -1,0 +1,20 @@
+[project]
+name = "ggp-ai"
+version = "0.0.1"
+description = "Ludii GGP experiments: dataset generation, position serialization, embedding precompute."
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "h5py>=3.10",
+]
+
+[project.optional-dependencies]
+# Heavy / hardware-specific deps. Install on the target GPU box:
+#   uv sync --extra embed
+embed = [
+    "vllm>=0.6.0",
+    "torch",
+]
+
+[tool.uv]
+package = false
