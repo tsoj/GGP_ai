@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Render a Ludii .lud position as text (fact list + ASCII board).
-
-Reuses the compiled Ludii classes produced by dataset_gen/generate_dataset.py,
-and compiles this folder's .java files on top.
-"""
+"""Render a Ludii .lud position as text (fact list + ASCII board)."""
 from __future__ import annotations
 
 import argparse
@@ -11,96 +7,30 @@ import os
 import pathlib
 import subprocess
 import sys
-import tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
-LUDII_ROOT = PROJECT_ROOT / "Ludii"
-DATASET_GEN = PROJECT_ROOT / "dataset_gen"
-DATASET_BUILD = DATASET_GEN / "build"
+sys.path.insert(0, str(PROJECT_ROOT))
 
-LUDII_MODULES = ["Common", "Core", "Language", "Features", "AI"]
-LUDII_LIB_JARS = [
-    "Common/lib/json-20180813.jar",
-    "Common/lib/Trove4j_ApacheCommonsRNG.jar",
-    "Common/lib/jfreesvg-3.4.jar",
-]
-
-
-def ensure_ludii_compiled() -> None:
-    """Run the dataset_gen compile step (idempotent) so we get Ludii classes."""
-    sentinel = DATASET_BUILD / ".compiled_ok"
-    if sentinel.exists():
-        return
-    print("[info] compiling Ludii via dataset_gen/generate_dataset.py ...")
-    subprocess.run(
-        [sys.executable, str(DATASET_GEN / "generate_dataset.py"), "--limit", "0"],
-        check=False,
-    )
-    if not sentinel.exists():
-        # Fall back to a minimal compile if the dataset script bailed early.
-        raise SystemExit("Ludii compilation failed; run dataset_gen/generate_dataset.py once first.")
-
-
-def compile_own(out_dir: pathlib.Path) -> None:
-    own = sorted(str(p) for p in HERE.glob("*.java"))
-    sentinel = out_dir / ".compiled_ok"
-    if sentinel.exists() and all(
-        sentinel.stat().st_mtime >= os.path.getmtime(s) for s in own
-    ):
-        return
-    out_dir.mkdir(parents=True, exist_ok=True)
-    cp = os.pathsep.join([str(DATASET_BUILD)] + [
-        str(LUDII_ROOT / j) for j in LUDII_LIB_JARS
-    ])
-    print(f"[compile] {len(own)} files -> {out_dir}")
-    release = _detect_java_release()
-    subprocess.run(
-        ["javac", "--release", release, "-encoding", "UTF-8", "-nowarn",
-         "-Xlint:none", "-proc:none", "-parameters", "-d", str(out_dir),
-         "-cp", cp, *own],
-        check=True,
-    )
-
-
-def _detect_java_release() -> str:
-    try:
-        out = subprocess.check_output(
-            ["java", "-version"], stderr=subprocess.STDOUT, text=True)
-    except Exception:
-        return "17"
-    for tok in out.split():
-        tok = tok.strip('"')
-        if tok and tok[0].isdigit():
-            major = tok.split(".", 1)[0]
-            if major.isdigit():
-                return major
-    return "17"
-    sentinel.write_text("ok\n")
-
-
-def runtime_classpath(out_dir: pathlib.Path) -> str:
-    parts = [str(out_dir), str(DATASET_BUILD)]
-    for m in LUDII_MODULES:
-        res = LUDII_ROOT / m / "res"
-        if res.is_dir():
-            parts.append(str(res))
-    for jar in LUDII_LIB_JARS:
-        parts.append(str(LUDII_ROOT / jar))
-    return os.pathsep.join(parts)
-
+import ludii_build as lb  # noqa: E402
 
 DEFAULT_SCAN_SOURCES = [
-    LUDII_ROOT / "Common/res/lud/board",
+    lb.LUDII_ROOT / "Common/res/lud/board",
     PROJECT_ROOT / "dataset_gen/resources/gavel_games",
 ]
 
 
+def _build_classpath() -> str:
+    ludii_build = lb.compile_ludii()
+    own_sources = sorted(str(p) for p in HERE.glob("*.java"))
+    own_build = HERE / "build"
+    lb.compile_extras(own_build, own_sources, [ludii_build])
+    return lb.runtime_classpath([own_build, ludii_build])
+
+
 def cmd_render(args: argparse.Namespace) -> int:
-    ensure_ludii_compiled()
-    out_dir = HERE / "build"
-    compile_own(out_dir)
-    cmd = ["java", "-cp", runtime_classpath(out_dir),
+    cp = _build_classpath()
+    cmd = ["java", "-cp", cp,
            "RenderPositions", str(args.lud.resolve()),
            "--plies", str(args.plies),
            "--seed", str(args.seed),
@@ -112,34 +42,17 @@ def cmd_render(args: argparse.Namespace) -> int:
 
 
 def cmd_scan(args: argparse.Namespace) -> int:
-    ensure_ludii_compiled()
-    out_dir = HERE / "build"
-    compile_own(out_dir)
-
+    cp = _build_classpath()
     sources = args.source if args.source else DEFAULT_SCAN_SOURCES
-    luds: list[pathlib.Path] = []
-    for s in sources:
-        if not s.exists():
-            print(f"[warn] missing: {s}", file=sys.stderr)
-            continue
-        if s.is_file() and s.suffix == ".lud":
-            luds.append(s.resolve())
-        else:
-            luds.extend(sorted(p.resolve() for p in s.rglob("*.lud")))
-    seen = set()
-    uniq = []
-    for f in luds:
-        if f not in seen: seen.add(f); uniq.append(f)
+    luds = lb.collect_lud_files(sources)
     if args.limit:
-        uniq = uniq[: args.limit]
-    if not uniq:
-        print("no .lud files", file=sys.stderr); return 2
+        luds = luds[: args.limit]
+    if not luds:
+        print("no .lud files", file=sys.stderr)
+        return 2
 
-    with tempfile.NamedTemporaryFile("w", suffix=".manifest", delete=False) as mf:
-        manifest = mf.name
-        for f in uniq: mf.write(str(f) + "\n")
-    try:
-        cmd = ["java", "-cp", runtime_classpath(out_dir),
+    with lb.manifest_file(luds) as manifest:
+        cmd = ["java", "-cp", cp,
                "ScanPositions",
                "--manifest", manifest,
                "--plies", str(args.plies),
@@ -149,9 +62,6 @@ def cmd_scan(args: argparse.Namespace) -> int:
         if args.samples_dir is not None:
             cmd += ["--samples-dir", str(args.samples_dir)]
         return subprocess.call(cmd)
-    finally:
-        try: os.unlink(manifest)
-        except OSError: pass
 
 
 def main() -> int:

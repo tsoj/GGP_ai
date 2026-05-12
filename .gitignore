@@ -1,6 +1,12 @@
 /gavel
 /LudiiPythonAI
 
+# Shared Ludii build output
+/build/
+
+# Python caches
+__pycache__/
+
 # dataset_gen build output and generated trials
 /dataset_gen/build/
 /dataset/

@@ -11,164 +11,20 @@ supervision.
 from __future__ import annotations
 
 import argparse
-import os
 import pathlib
-import shutil
 import subprocess
 import sys
-import tempfile
 
 HERE = pathlib.Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parent
-LUDII_ROOT = PROJECT_ROOT / "Ludii"
+sys.path.insert(0, str(PROJECT_ROOT))
 
-# Modules whose src/ trees we feed to javac and whose res/ trees we add to the
-# runtime classpath (Ludii looks up .lud assets via getResourceAsStream).
-# Headless modules only — Player/PlayerDesktop drag in Apache Batik / javax.mail
-# UI deps that aren't needed for trial generation. Manager/ViewController are
-# Swing-only so we skip them too.
-LUDII_MODULES = ["Common", "Core", "Language", "Features", "AI"]
-
-# Skip files/dirs that drag in unwanted deps (JUnit, Player UI, mail, batik...).
-JAVA_PATH_SKIPS = (
-    "/test/",
-    "/junit/",
-)
-
-LUDII_LIB_JARS = [
-    "Common/lib/json-20180813.jar",
-    "Common/lib/Trove4j_ApacheCommonsRNG.jar",
-    "Common/lib/jfreesvg-3.4.jar",
-]
+import ludii_build as lb  # noqa: E402
 
 DEFAULT_SOURCE_DIRS = [
-    LUDII_ROOT / "Common/res/lud/board",
+    lb.LUDII_ROOT / "Common/res/lud/board",
     HERE / "resources" / "gavel_games",
 ]
-
-
-def build_runtime_classpath(ludii_root: pathlib.Path,
-                            out_class_dir: pathlib.Path) -> str:
-    """Classpath used to launch the JVM. Includes Ludii res/ dirs because
-    Ludii pulls some assets via getResourceAsStream."""
-    parts = [str(out_class_dir)]
-    for m in LUDII_MODULES:
-        res_dir = ludii_root / m / "res"
-        if res_dir.is_dir():
-            parts.append(str(res_dir))
-    for jar in LUDII_LIB_JARS:
-        parts.append(str(ludii_root / jar))
-    return os.pathsep.join(parts)
-
-
-def build_sourcepath(ludii_root: pathlib.Path) -> str:
-    parts = []
-    for m in LUDII_MODULES:
-        src_dir = ludii_root / m / "src"
-        if src_dir.is_dir():
-            parts.append(str(src_dir))
-    return os.pathsep.join(parts)
-
-
-def _collect_java_sources(ludii_root: pathlib.Path) -> list[str]:
-    files: list[str] = []
-    for m in LUDII_MODULES:
-        src_dir = ludii_root / m / "src"
-        if src_dir.is_dir():
-            for p in src_dir.rglob("*.java"):
-                s = str(p)
-                if any(skip in s for skip in JAVA_PATH_SKIPS):
-                    continue
-                files.append(s)
-    return files
-
-
-def compile_java(out_class_dir: pathlib.Path, ludii_root: pathlib.Path) -> None:
-    """Compile our launcher together with the entire Ludii source tree.
-
-    Ludii's grammar relies on reflection over `game.*` classes that aren't
-    transitively reached from GenerateDataset.java, so a sourcepath-only
-    compile produces a runtime NullPointerException. Compiling the whole
-    tree once into out_class_dir avoids that and matches what ant would
-    have produced.
-    """
-    out_class_dir.mkdir(parents=True, exist_ok=True)
-    own_sources = sorted(str(p) for p in HERE.glob("*.java"))
-    sentinel = out_class_dir / ".compiled_ok"
-    if sentinel.exists() and all(
-        sentinel.stat().st_mtime >= os.path.getmtime(s) for s in own_sources
-    ):
-        return
-
-    java_release = _detect_java_release()
-    classpath = os.pathsep.join(str(ludii_root / j) for j in LUDII_LIB_JARS)
-    sources = _collect_java_sources(ludii_root) + own_sources
-    print(f"[compile] {len(sources)} .java files (release {java_release}) "
-          f"-> {out_class_dir}")
-
-    # Pass the file list via @argfile to dodge ARG_MAX.
-    with tempfile.NamedTemporaryFile("w", suffix=".lst", delete=False) as af:
-        argfile = af.name
-        for s in sources:
-            af.write('"' + s.replace('\\', '\\\\').replace('"', '\\"') + '"\n')
-    try:
-        subprocess.run(
-            ["javac",
-             "--release", java_release,
-             "-encoding", "UTF-8",
-             "-nowarn",
-             "-Xlint:none",
-             "-proc:none",
-             # Ludii's compiler reflects on constructor parameter names.
-             "-parameters",
-             "-d", str(out_class_dir),
-             "-cp", classpath,
-             "@" + argfile],
-            check=True,
-        )
-    finally:
-        try:
-            os.unlink(argfile)
-        except OSError:
-            pass
-
-    sentinel.write_text("ok\n")
-
-
-def _detect_java_release() -> str:
-    try:
-        out = subprocess.check_output(
-            ["java", "-version"], stderr=subprocess.STDOUT, text=True)
-    except Exception:
-        return "17"
-    # e.g. 'openjdk version "25.0.3" 2026-04-21'
-    for tok in out.split():
-        tok = tok.strip('"')
-        if tok and tok[0].isdigit():
-            major = tok.split(".", 1)[0]
-            if major.isdigit():
-                return major
-    return "17"
-
-
-def collect_lud_files(sources: list[pathlib.Path]) -> list[pathlib.Path]:
-    files: list[pathlib.Path] = []
-    for src in sources:
-        if not src.exists():
-            print(f"[warn] source missing: {src}", file=sys.stderr)
-            continue
-        if src.is_file() and src.suffix == ".lud":
-            files.append(src.resolve())
-        else:
-            files.extend(sorted(p.resolve() for p in src.rglob("*.lud")))
-    # Dedup while preserving order.
-    seen = set()
-    unique = []
-    for f in files:
-        if f not in seen:
-            seen.add(f)
-            unique.append(f)
-    return unique
 
 
 def main() -> int:
@@ -216,7 +72,7 @@ def main() -> int:
     ap.add_argument("--source", action="append", type=pathlib.Path, default=None,
                     help="Override source dir/file (repeatable). "
                          "Defaults to the two configured directories.")
-    ap.add_argument("--ludii-root", type=pathlib.Path, default=LUDII_ROOT,
+    ap.add_argument("--ludii-root", type=pathlib.Path, default=lb.LUDII_ROOT,
                     help="Path to the Ludii repository (with built bin/ dirs).")
     ap.add_argument("--jvm-arg", action="append", default=[],
                     help="Extra JVM flag, e.g. --jvm-arg=-Xmx8g")
@@ -225,7 +81,7 @@ def main() -> int:
     args = ap.parse_args()
 
     sources = args.source if args.source else DEFAULT_SOURCE_DIRS
-    lud_files = collect_lud_files(sources)
+    lud_files = lb.collect_lud_files(sources)
     if args.limit:
         lud_files = lud_files[: args.limit]
     if not lud_files:
@@ -240,7 +96,6 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     failures_file.parent.mkdir(parents=True, exist_ok=True)
     if not args.append:
-        # Truncate so a fresh run starts clean. The Java side appends.
         failures_file.write_text("")
 
     print(f"[info] {len(lud_files)} games -> {out_dir}")
@@ -248,16 +103,15 @@ def main() -> int:
     print(f"[info] {args.num_games} trials/game, {args.num_playouts} playouts/move,"
           f" move_limit={args.move_limit}, max_game_seconds={args.max_game_seconds}")
 
-    out_class_dir = HERE / "build"
-    compile_java(out_class_dir, args.ludii_root)
-    full_cp = build_runtime_classpath(args.ludii_root, out_class_dir)
+    ludii_build = lb.compile_ludii(ludii_root=args.ludii_root)
+    own_sources = sorted(str(p) for p in HERE.glob("*.java"))
+    own_build = HERE / "build"
+    lb.compile_extras(own_build, own_sources, [ludii_build],
+                      ludii_root=args.ludii_root)
+    full_cp = lb.runtime_classpath([own_build, ludii_build],
+                                   ludii_root=args.ludii_root)
 
-    with tempfile.NamedTemporaryFile("w", suffix=".manifest", delete=False) as mf:
-        manifest_path = mf.name
-        for f in lud_files:
-            mf.write(str(f) + "\n")
-
-    try:
+    with lb.manifest_file(lud_files) as manifest_path:
         cmd = [
             "java",
             *args.jvm_arg,
@@ -282,11 +136,6 @@ def main() -> int:
             cmd += ["--verbose"]
         print("[run]", " ".join(cmd))
         return subprocess.call(cmd)
-    finally:
-        try:
-            os.unlink(manifest_path)
-        except OSError:
-            pass
 
 
 if __name__ == "__main__":
