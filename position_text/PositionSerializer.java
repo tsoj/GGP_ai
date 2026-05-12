@@ -308,6 +308,11 @@ public final class PositionSerializer
         }
 
         final GlyphMap gm = new GlyphMap();
+        // Global taken set so glyphs never collide across players.
+        // (A 4-player game with multiple piece types per player can otherwise
+        // have P1 'C' and P3 'C' both map to "Counter".)
+        final java.util.Set<Character> taken = new java.util.HashSet<>();
+        final java.util.Set<Integer> collapsedOwners = new java.util.LinkedHashSet<>();
         for (final Map.Entry<Integer, TreeMap<Integer, String>> e : typesByOwner.entrySet())
         {
             final int owner = e.getKey();
@@ -315,43 +320,45 @@ public final class PositionSerializer
             if (byWhat.size() == 1)
             {
                 final Map.Entry<Integer, String> only = byWhat.firstEntry();
-                final char g = ownerGlyph(owner);
+                final char og = ownerGlyph(owner);
+                final char g;
+                if (!taken.contains(og))
+                {
+                    g = og;
+                }
+                else
+                {
+                    final Character lg = tryPickLetterGlyph(only.getValue(), owner, taken);
+                    g = (lg != null) ? lg : og;
+                    if (lg == null) collapsedOwners.add(owner);
+                }
+                taken.add(g);
                 gm.charByKey.put(key(owner, only.getKey()), g);
                 gm.legend.add(g + " = P" + owner + " " + only.getValue());
             }
             else
             {
-                final java.util.Set<Character> taken = new java.util.HashSet<>();
-                // Sort entries by piece-name for stable assignment.
                 final LinkedHashMap<Integer, String> ordered = new LinkedHashMap<>();
                 byWhat.entrySet().stream()
                     .sorted(Map.Entry.comparingByValue())
                     .forEach(en -> ordered.put(en.getKey(), en.getValue()));
-                boolean collapsed = false;
                 for (final Map.Entry<Integer, String> en : ordered.entrySet())
                 {
                     Character g = tryPickLetterGlyph(en.getValue(), owner, taken);
                     if (g == null)
                     {
-                        // Too many piece types for the letter pool: fall
-                        // back to the owner glyph for every remaining type.
-                        // ASCII will lose type information for this player;
-                        // FACTS still carries it.
                         g = ownerGlyph(owner);
-                        collapsed = true;
+                        collapsedOwners.add(owner);
                     }
-                    else
-                    {
-                        taken.add(g);
-                    }
+                    taken.add(g);
                     gm.charByKey.put(key(owner, en.getKey()), g);
                     gm.legend.add(g + " = P" + owner + " " + en.getValue());
                 }
-                if (collapsed)
-                    gm.legend.add("(P" + owner + " piece types collapsed onto '"
-                        + ownerGlyph(owner) + "' — see FACTS)");
             }
         }
+        for (final int owner : collapsedOwners)
+            gm.legend.add("(P" + owner + " piece types collapsed onto '"
+                + ownerGlyph(owner) + "' — see FACTS)");
         gm.legend.sort(String::compareTo);
         return gm;
     }
