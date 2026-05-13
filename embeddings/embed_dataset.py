@@ -206,7 +206,7 @@ def make_vllm_embedder(model_name: str, max_model_len: int | None,
     # when --dummy-embedder is used without it installed.
     from vllm import LLM
 
-    kwargs = dict(model=model_name, task="embed",
+    kwargs = dict(model=model_name,
                   gpu_memory_utilization=gpu_memory_utilization,
                   dtype=dtype, trust_remote_code=True)
     if max_model_len is not None:
