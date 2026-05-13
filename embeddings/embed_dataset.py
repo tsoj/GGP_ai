@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import os
 import pathlib
+import random
 import sys
 import time
 
@@ -124,14 +125,25 @@ def process_game(
 
     # Decide K per trial so total ~= target_per_game.
     n_trials = len(tf.trials)
-    k_per_trial = max(1, round(target_per_game / max(1, n_trials)))
     tasks: list[tuple[int, rt.TrialRecord, list[int]]] = []
-    for ti, trial in enumerate(tf.trials):
-        plies = sample_plies(len(trial.moves), k_per_trial)
-        if plies:
-            tasks.append((ti, trial, plies))
+    if target_per_game < n_trials:
+        # Sample a subset of trials, one position each, to honor the cap.
+        chosen = sorted(random.sample(range(n_trials), target_per_game))
+        for ti in chosen:
+            trial = tf.trials[ti]
+            plies = sample_plies(len(trial.moves), 1)
+            if plies:
+                tasks.append((ti, trial, plies))
+        sampling_desc = f"1/trial across {target_per_game}/{n_trials} trials"
+    else:
+        k_per_trial = max(1, round(target_per_game / max(1, n_trials)))
+        for ti, trial in enumerate(tf.trials):
+            plies = sample_plies(len(trial.moves), k_per_trial)
+            if plies:
+                tasks.append((ti, trial, plies))
+        sampling_desc = f"{k_per_trial}/trial"
     total_positions = sum(len(t[2]) for t in tasks)
-    print(f"[{game_id}] sampling {k_per_trial}/trial -> {total_positions} positions",
+    print(f"[{game_id}] sampling {sampling_desc} -> {total_positions} positions",
           flush=True)
 
     t0 = time.time()
