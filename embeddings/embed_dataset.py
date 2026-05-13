@@ -104,6 +104,92 @@ def signed_outcome(ranking: list[float], mover: int, num_players: int) -> float:
     return float(np.clip(raw / denom, -1.0, 1.0))
 
 
+class ContextOverflowError(RuntimeError):
+    """Raised when an input text exceeds the embedder's max context length."""
+
+
+def _is_context_overflow(exc: BaseException) -> bool:
+    # vLLM raises vllm.exceptions.VLLMValidationError for over-length prompts;
+    # match by class name so we don't need to import vllm here.
+    if type(exc).__name__ == "VLLMValidationError":
+        return True
+    msg = str(exc).lower()
+    needles = (
+        "maximum context length",
+        "max_model_len",
+        "longer than the maximum",
+        "exceeds the model",
+        "exceeds maximum",
+        "context length",
+        "input_tokens",
+    )
+    return any(s in msg for s in needles)
+
+
+def strip_lud_metadata(src: str) -> str:
+    """Remove top-level ``(metadata ...)`` blocks from a .lud source string.
+
+    Tracks parens while skipping ``"..."`` strings and ``// ...`` line comments
+    so braces inside descriptions don't unbalance the count.
+    """
+    out: list[str] = []
+    i, n = 0, len(src)
+    depth = 0
+    while i < n:
+        c = src[i]
+        if c == '"':  # copy string literal verbatim
+            j = i + 1
+            while j < n and src[j] != '"':
+                if src[j] == '\\' and j + 1 < n:
+                    j += 2
+                    continue
+                j += 1
+            out.append(src[i:min(j + 1, n)])
+            i = j + 1
+            continue
+        if c == '/' and i + 1 < n and src[i + 1] == '/':
+            j = src.find('\n', i)
+            if j == -1:
+                out.append(src[i:])
+                break
+            out.append(src[i:j])
+            i = j
+            continue
+        if c == '(':
+            if depth == 0 and src[i + 1:i + 10].lstrip().startswith('metadata'):
+                # Skip this whole top-level (metadata ...) block.
+                d = 1
+                j = i + 1
+                while j < n and d > 0:
+                    cc = src[j]
+                    if cc == '"':
+                        j += 1
+                        while j < n and src[j] != '"':
+                            if src[j] == '\\' and j + 1 < n:
+                                j += 2
+                                continue
+                            j += 1
+                        j += 1
+                        continue
+                    if cc == '/' and j + 1 < n and src[j + 1] == '/':
+                        nl = src.find('\n', j)
+                        j = n if nl == -1 else nl
+                        continue
+                    if cc == '(':
+                        d += 1
+                    elif cc == ')':
+                        d -= 1
+                    j += 1
+                i = j
+                continue
+            depth += 1
+        elif c == ')':
+            depth -= 1
+        out.append(c)
+        i += 1
+    return ''.join(out)
+
+
 def process_game(
     game_id: str,
     target_per_game: int,
@@ -155,7 +241,8 @@ def process_game(
     # Embed
     texts = [r.text for r in rendered]
     if prefix_lud:
-        lud_text = tf.lud_path.read_text(encoding="utf-8", errors="replace")
+        lud_text = strip_lud_metadata(
+            tf.lud_path.read_text(encoding="utf-8", errors="replace"))
         prefix = (
             "The following is the Ludii game description (.lud) defining the "
             "rules of the game:\n\n"
@@ -180,7 +267,12 @@ def process_game(
     print(f"[{game_id}] embedding {len(texts)} texts in batches of {embed_batch}...",
           flush=True)
     t0 = time.time()
-    embeddings = embedder(texts, batch_size=embed_batch)
+    try:
+        embeddings = embedder(texts, batch_size=embed_batch)
+    except Exception as e:
+        if _is_context_overflow(e):
+            raise ContextOverflowError(str(e)) from e
+        raise
     print(f"[{game_id}] embedded in {time.time() - t0:.1f}s, "
           f"dim={embeddings.shape[1]}", flush=True)
 
@@ -314,6 +406,12 @@ def main() -> int:
     ap.add_argument("--prefix-lud", action="store_true",
                     help="Prepend the game's .lud rules (with a short framing "
                          "note) to every input text before embedding.")
+    ap.add_argument("--failures-file", type=pathlib.Path, default=None,
+                    help="TSV log of skipped games "
+                         "(default: <out-dir>/logs/failures.tsv). "
+                         "Format: <game_id>\\t<reason>\\t<detail>.")
+    ap.add_argument("--append", action="store_true",
+                    help="Don't truncate the failures log at startup.")
     ap.add_argument("--debug-print-texts", type=int, default=0, metavar="N",
                     help="Print the first N rendered texts (verbatim) per game "
                          "before embedding. For inspecting what the model sees.")
@@ -338,16 +436,33 @@ def main() -> int:
     else:
         games = args.games if args.games is not None else DEFAULT_GAMES
 
+    failures_file = (args.failures_file
+                     if args.failures_file is not None
+                     else args.out_dir / "logs" / "failures.tsv").resolve()
+    failures_file.parent.mkdir(parents=True, exist_ok=True)
+    if not args.append:
+        failures_file.write_text("")
+    print(f"[info] failures log -> {failures_file}", flush=True)
+
+    def log_failure(game_id: str, reason: str, detail: str) -> None:
+        line = f"{game_id}\t{reason}\t{detail.replace(chr(9), ' ').replace(chr(10), ' ')}\n"
+        with open(failures_file, "a") as f:
+            f.write(line)
+
     for g in games:
         out_path = args.out_dir / f"{g}.h5"
         if args.skip_existing and out_path.exists():
             print(f"[{g}] skip (exists: {out_path})", flush=True)
             continue
-        process_game(g, args.target_per_game, args.out_dir,
-                     model_name, args.embed_batch, embedder,
-                     debug_print_texts=args.debug_print_texts,
-                     render_threads=render_threads,
-                     prefix_lud=args.prefix_lud)
+        try:
+            process_game(g, args.target_per_game, args.out_dir,
+                         model_name, args.embed_batch, embedder,
+                         debug_print_texts=args.debug_print_texts,
+                         render_threads=render_threads,
+                         prefix_lud=args.prefix_lud)
+        except ContextOverflowError as e:
+            print(f"[{g}] SKIP context_overflow: {e}", flush=True)
+            log_failure(g, "context_overflow", str(e))
     return 0
 
 
