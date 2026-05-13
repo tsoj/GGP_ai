@@ -29,3 +29,6 @@ __pycache__/
 *.local.py
 embeddings/out_all_games/
 training/out/
+embeddings/out_old/
+training/out_all/
+training/out_all_split_game/

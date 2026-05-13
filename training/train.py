@@ -64,12 +64,13 @@ def train_one_game(
     max_epochs: int,
     patience: int,
     device: torch.device,
+    target: str = "side_outcome",
 ) -> dict:
     game_id = h5_path.stem
     game_out = out_dir / game_id
     game_out.mkdir(parents=True, exist_ok=True)
 
-    emb, y = load_game(h5_path)
+    emb, y = load_game(h5_path, target=target)
     n, d = emb.shape
     unique, counts = np.unique(y, return_counts=True)
     target_dist = {str(float(u)): int(c) for u, c in zip(unique, counts)}
@@ -207,6 +208,8 @@ def main() -> int:
     ap.add_argument("--weight-decay", type=float, default=1e-2)
     ap.add_argument("--max-epochs", type=int, default=100)
     ap.add_argument("--patience", type=int, default=10)
+    ap.add_argument("--target", choices=("side_outcome", "p1_outcome"),
+                    default="side_outcome")
     args = ap.parse_args()
 
     h5_dir: pathlib.Path = args.h5_dir
@@ -235,6 +238,7 @@ def main() -> int:
             max_epochs=args.max_epochs,
             patience=args.patience,
             device=device,
+            target=args.target,
         )
         summary.append(res)
 

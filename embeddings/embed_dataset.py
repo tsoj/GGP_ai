@@ -81,22 +81,16 @@ def discover_all_game_ids() -> list[str]:
 
 
 def sample_plies(num_moves: int, k: int) -> list[int]:
-    """K uniformly spaced ply indices in [0, num_moves] (start + after-k-moves)."""
+    """K ply indices drawn uniformly at random (without replacement) from
+    [0, num_moves]. If k >= num_moves+1, returns every ply."""
     if num_moves < 0:
         raise ValueError(num_moves)
     if k <= 0:
         return []
-    if k == 1:
-        return [num_moves]
-    pts = np.linspace(0, num_moves, k).round().astype(int).tolist()
-    # dedupe while preserving order
-    seen: set[int] = set()
-    out: list[int] = []
-    for p in pts:
-        if p not in seen:
-            seen.add(p)
-            out.append(p)
-    return out
+    population = num_moves + 1  # plies 0..num_moves inclusive
+    if k >= population:
+        return list(range(population))
+    return sorted(random.sample(range(population), k))
 
 
 def signed_outcome(ranking: list[float], mover: int, num_players: int) -> float:
