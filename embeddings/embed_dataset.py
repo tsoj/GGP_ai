@@ -90,6 +90,7 @@ def process_game(
     model_name: str,
     embed_batch: int,
     embedder,
+    debug_print_texts: int = 0,
 ) -> pathlib.Path:
     trial_path = find_trial_file(game_num)
     tf = rt.parse_trial_file(trial_path)
@@ -123,6 +124,17 @@ def process_game(
 
     # Embed
     texts = [r.text for r in rendered]
+    if debug_print_texts > 0:
+        n_show = min(debug_print_texts, len(rendered))
+        print(f"[{game_num}] --- debug: first {n_show} of {len(rendered)} "
+              f"texts fed to embedder ---", flush=True)
+        for i in range(n_show):
+            r = rendered[i]
+            print(f"===== [{game_num}] idx={i}  trial={r.trial_idx}  "
+                  f"ply={r.ply}  mover={r.mover}  terminal={r.terminal} =====",
+                  flush=True)
+            print(r.text, flush=True)
+        print(f"[{game_num}] --- end debug texts ---", flush=True)
     print(f"[{game_num}] embedding {len(texts)} texts in batches of {embed_batch}...",
           flush=True)
     t0 = time.time()
@@ -248,6 +260,9 @@ def main() -> int:
                     help="vLLM dtype (bfloat16 / float16 / auto).")
     ap.add_argument("--dummy-embedder", action="store_true",
                     help="Skip vLLM; produce random vectors. For pipeline tests.")
+    ap.add_argument("--debug-print-texts", type=int, default=0, metavar="N",
+                    help="Print the first N rendered texts (verbatim) per game "
+                         "before embedding. For inspecting what the model sees.")
     args = ap.parse_args()
 
     if args.dummy_embedder:
@@ -261,7 +276,8 @@ def main() -> int:
 
     for g in args.games:
         process_game(g, args.target_per_game, args.out_dir,
-                     model_name, args.embed_batch, embedder)
+                     model_name, args.embed_batch, embedder,
+                     debug_print_texts=args.debug_print_texts)
     return 0
 
 

@@ -10,7 +10,7 @@ __pycache__/
 # dataset_gen build output and generated trials
 /dataset_gen/build/
 /dataset/
-/dataset_backup/
+/dataset_backup*/
 
 # position_text build output and scratch data
 /position_text/build/
