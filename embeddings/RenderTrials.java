@@ -3,10 +3,16 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.rng.core.RandomProviderDefaultState;
 
@@ -38,18 +44,20 @@ public class RenderTrials
     {
         String ludPath = null;
         String tasksPath = null;
+        int threads = Math.max(1, Runtime.getRuntime().availableProcessors());
         for (int i = 0; i < args.length; i++)
         {
             switch (args[i])
             {
-                case "--lud":   ludPath   = args[++i]; break;
-                case "--tasks": tasksPath = args[++i]; break;
+                case "--lud":     ludPath   = args[++i]; break;
+                case "--tasks":   tasksPath = args[++i]; break;
+                case "--threads": threads   = Math.max(1, Integer.parseInt(args[++i])); break;
                 default: System.err.println("unexpected arg: " + args[i]); System.exit(2);
             }
         }
         if (ludPath == null || tasksPath == null)
         {
-            System.err.println("usage: RenderTrials --lud <path> --tasks <file>");
+            System.err.println("usage: RenderTrials --lud <path> --tasks <file> [--threads N]");
             System.exit(2);
         }
 
@@ -57,28 +65,62 @@ public class RenderTrials
         if (game == null) { System.err.println("could not load: " + ludPath); System.exit(1); }
         game.setMaxMoveLimit(10_000);
 
-        final PrintStream out = new PrintStream(System.out, false, "UTF-8");
-        final Base64.Encoder b64 = Base64.getEncoder();
-
-        int taskIdx = 0;
+        // Read all tasks into memory so workers can pick them up by index.
+        final List<byte[]> rngs = new ArrayList<>();
+        final List<int[]> moves = new ArrayList<>();
+        final List<int[]> plies = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new FileReader(tasksPath)))
         {
             String line;
+            int taskIdx = 0;
             while ((line = br.readLine()) != null)
             {
-                if (line.isEmpty()) { taskIdx++; continue; }
+                if (line.isEmpty()) { rngs.add(null); moves.add(null); plies.add(null); taskIdx++; continue; }
                 final String[] parts = line.split("\t", -1);
                 if (parts.length != 3)
                 {
                     System.err.println("bad task line " + taskIdx + ": " + line);
                     System.exit(3);
                 }
-                final byte[] rng = hexToBytes(parts[0]);
-                final int[] moves = parseInts(parts[1]);
-                final int[] plies = parseInts(parts[2]);
-                renderTask(game, rng, moves, plies, taskIdx, out, b64);
+                rngs.add(hexToBytes(parts[0]));
+                moves.add(parseInts(parts[1]));
+                plies.add(parseInts(parts[2]));
                 taskIdx++;
             }
+        }
+
+        final PrintStream out = new PrintStream(System.out, false, "UTF-8");
+        // Single shared base64 encoder is thread-safe (stateless after construction).
+        final Base64.Encoder b64 = Base64.getEncoder();
+
+        final int nTasks = rngs.size();
+        final ExecutorService pool = Executors.newFixedThreadPool(threads);
+        try
+        {
+            final List<Future<?>> futures = new ArrayList<>(nTasks);
+            for (int i = 0; i < nTasks; i++)
+            {
+                if (rngs.get(i) == null) continue;
+                final int idx = i;
+                final byte[] rng = rngs.get(i);
+                final int[] mv = moves.get(i);
+                final int[] pl = plies.get(i);
+                futures.add(pool.submit(() -> renderTask(game, rng, mv, pl, idx, out, b64)));
+            }
+            for (final Future<?> f : futures)
+            {
+                try { f.get(); }
+                catch (final Exception e)
+                {
+                    System.err.println("task failed: " + e);
+                    System.exit(7);
+                }
+            }
+        }
+        finally
+        {
+            pool.shutdown();
+            pool.awaitTermination(1, TimeUnit.DAYS);
         }
         out.flush();
     }
@@ -138,12 +180,12 @@ public class RenderTrials
         final int terminal = ctx.trial().over() ? 1 : 0;
         final String text = PositionSerializer.serialize(ctx);
         final String enc = b64.encodeToString(text.getBytes(StandardCharsets.UTF_8));
-        out.print("POS ");
-        out.print(taskIdx); out.print(' ');
-        out.print(ply); out.print(' ');
-        out.print(mover); out.print(' ');
-        out.print(terminal); out.print(' ');
-        out.println(enc);
+        // Build the whole line then println in one call: PrintStream.println is
+        // synchronized, so each line stays atomic across worker threads.
+        final StringBuilder sb = new StringBuilder(enc.length() + 32);
+        sb.append("POS ").append(taskIdx).append(' ').append(ply).append(' ')
+          .append(mover).append(' ').append(terminal).append(' ').append(enc);
+        out.println(sb.toString());
     }
 
     private static int[] parseInts(final String csv)

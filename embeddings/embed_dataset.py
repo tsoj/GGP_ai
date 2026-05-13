@@ -20,6 +20,7 @@ Usage on the target GPU box (single file generates everything):
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import sys
 import time
@@ -34,18 +35,37 @@ sys.path.insert(0, str(HERE))
 
 import render_trials as rt  # noqa: E402
 
-DEFAULT_GAMES = ["001", "003", "014", "019", "052"]
-GAVEL_DIR = PROJECT_ROOT / "dataset_gen" / "resources" / "gavel_games"
+DEFAULT_GAMES = [
+    "game_001_fit1.000_seed_1",
+    "game_003_fit1.000_seed_1",
+    "game_014_fit1.000_seed_1",
+    "game_019_fit1.000_seed_1",
+    "game_052_fit1.000_seed_3",
+]
 DATASET_DIR = PROJECT_ROOT / "dataset"
 
 
-def find_trial_file(game_num: str) -> pathlib.Path:
-    matches = sorted(DATASET_DIR.glob(f"game_{game_num}_*.txt"))
-    if not matches:
-        raise FileNotFoundError(f"no trial file for game_{game_num}_* in {DATASET_DIR}")
+def resolve_game_id(game_id: str) -> pathlib.Path:
+    """Resolve a game id to its trial .txt path.
+
+    Accepts either:
+      - the exact stem (e.g. "Aboyne" or "game_001_fit1.000_seed_1"); or
+      - a short numeric form for gavel games (e.g. "001" -> "game_001_*").
+    """
+    direct = DATASET_DIR / f"{game_id}.txt"
+    if direct.exists():
+        return direct
+    matches = sorted(DATASET_DIR.glob(f"game_{game_id}_*.txt"))
+    if len(matches) == 1:
+        return matches[0]
     if len(matches) > 1:
-        raise RuntimeError(f"ambiguous trial file for game_{game_num}_*: {matches}")
-    return matches[0]
+        raise RuntimeError(f"ambiguous game id '{game_id}': {matches}")
+    raise FileNotFoundError(f"no trial file for game id '{game_id}' in {DATASET_DIR}")
+
+
+def discover_all_game_ids() -> list[str]:
+    """Return every trial-file stem in dataset/."""
+    return sorted(p.stem for p in DATASET_DIR.glob("*.txt"))
 
 
 def sample_plies(num_moves: int, k: int) -> list[int]:
@@ -84,26 +104,23 @@ def signed_outcome(ranking: list[float], mover: int, num_players: int) -> float:
 
 
 def process_game(
-    game_num: str,
+    game_id: str,
     target_per_game: int,
     out_dir: pathlib.Path,
     model_name: str,
     embed_batch: int,
     embedder,
     debug_print_texts: int = 0,
+    render_threads: int | None = None,
 ) -> pathlib.Path:
-    trial_path = find_trial_file(game_num)
+    trial_path = resolve_game_id(game_id)
+    game_id = trial_path.stem  # canonical (in case user passed a short form)
     tf = rt.parse_trial_file(trial_path)
-    print(f"[{game_num}] {trial_path.name}: {len(tf.trials)} trials, "
+    print(f"[{game_id}] {trial_path.name}: {len(tf.trials)} trials, "
           f"{tf.num_players} players, lud={tf.lud_path.name}", flush=True)
 
     if not tf.lud_path.exists():
-        # try resolving relative to gavel_games if absolute path is stale
-        cand = GAVEL_DIR / tf.lud_path.name
-        if cand.exists():
-            tf.lud_path = cand
-        else:
-            raise FileNotFoundError(f"lud not found: {tf.lud_path}")
+        raise FileNotFoundError(f"lud not found: {tf.lud_path}")
 
     # Decide K per trial so total ~= target_per_game.
     n_trials = len(tf.trials)
@@ -114,32 +131,32 @@ def process_game(
         if plies:
             tasks.append((ti, trial, plies))
     total_positions = sum(len(t[2]) for t in tasks)
-    print(f"[{game_num}] sampling {k_per_trial}/trial -> {total_positions} positions",
+    print(f"[{game_id}] sampling {k_per_trial}/trial -> {total_positions} positions",
           flush=True)
 
     t0 = time.time()
-    rendered = rt.render_positions(tf.lud_path, tasks)
-    print(f"[{game_num}] rendered {len(rendered)} positions in "
+    rendered = rt.render_positions(tf.lud_path, tasks, threads=render_threads)
+    print(f"[{game_id}] rendered {len(rendered)} positions in "
           f"{time.time() - t0:.1f}s", flush=True)
 
     # Embed
     texts = [r.text for r in rendered]
     if debug_print_texts > 0:
         n_show = min(debug_print_texts, len(rendered))
-        print(f"[{game_num}] --- debug: first {n_show} of {len(rendered)} "
+        print(f"[{game_id}] --- debug: first {n_show} of {len(rendered)} "
               f"texts fed to embedder ---", flush=True)
         for i in range(n_show):
             r = rendered[i]
-            print(f"===== [{game_num}] idx={i}  trial={r.trial_idx}  "
+            print(f"===== [{game_id}] idx={i}  trial={r.trial_idx}  "
                   f"ply={r.ply}  mover={r.mover}  terminal={r.terminal} =====",
                   flush=True)
             print(r.text, flush=True)
-        print(f"[{game_num}] --- end debug texts ---", flush=True)
-    print(f"[{game_num}] embedding {len(texts)} texts in batches of {embed_batch}...",
+        print(f"[{game_id}] --- end debug texts ---", flush=True)
+    print(f"[{game_id}] embedding {len(texts)} texts in batches of {embed_batch}...",
           flush=True)
     t0 = time.time()
     embeddings = embedder(texts, batch_size=embed_batch)
-    print(f"[{game_num}] embedded in {time.time() - t0:.1f}s, "
+    print(f"[{game_id}] embedded in {time.time() - t0:.1f}s, "
           f"dim={embeddings.shape[1]}", flush=True)
 
     # Labels
@@ -156,11 +173,11 @@ def process_game(
             ranking[i, j] = rk[j]
         side_outcome[i] = signed_outcome(rk, r.mover, tf.num_players)
 
-    out_path = out_dir / f"game_{game_num}.h5"
+    out_path = out_dir / f"{game_id}.h5"
     out_dir.mkdir(parents=True, exist_ok=True)
     _write_h5(out_path, tf, model_name, embeddings, trial_idx, ply, mover,
               terminal, ranking, side_outcome, texts)
-    print(f"[{game_num}] wrote {out_path} ({out_path.stat().st_size / 1e6:.1f} MB)",
+    print(f"[{game_id}] wrote {out_path} ({out_path.stat().st_size / 1e6:.1f} MB)",
           flush=True)
     return out_path
 
@@ -241,9 +258,15 @@ def make_dummy_embedder(dim: int = 16):
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--games", nargs="+", default=DEFAULT_GAMES,
-                    help="Game numbers (zero-padded), default: "
-                         + " ".join(DEFAULT_GAMES))
+    ap.add_argument("--games", nargs="+", default=None,
+                    help="Game numbers (zero-padded). Default: "
+                         + " ".join(DEFAULT_GAMES) + ". "
+                         "Ignored if --all-games is set.")
+    ap.add_argument("--all-games", action="store_true",
+                    help="Process every game with a trial file in dataset/.")
+    ap.add_argument("--skip-existing", action="store_true",
+                    help="Skip games whose <out-dir>/game_<num>.h5 already "
+                         "exists. Useful when resuming with --all-games.")
     ap.add_argument("--target-per-game", type=int, default=4096,
                     help="Approximate total positions per game (split evenly "
                          "across trials, min 1 per trial).")
@@ -260,6 +283,9 @@ def main() -> int:
                     help="vLLM dtype (bfloat16 / float16 / auto).")
     ap.add_argument("--dummy-embedder", action="store_true",
                     help="Skip vLLM; produce random vectors. For pipeline tests.")
+    ap.add_argument("--render-threads", type=int, default=None,
+                    help="JVM worker threads for trial replay. "
+                         "Default: max(1, available_cores // 2).")
     ap.add_argument("--debug-print-texts", type=int, default=0, metavar="N",
                     help="Print the first N rendered texts (verbatim) per game "
                          "before embedding. For inspecting what the model sees.")
@@ -274,10 +300,25 @@ def main() -> int:
             args.gpu_memory_utilization, args.dtype)
         model_name = args.model
 
-    for g in args.games:
+    render_threads = (args.render_threads if args.render_threads is not None
+                      else max(1, (os.cpu_count() or 2) // 2))
+
+    if args.all_games:
+        games = discover_all_game_ids()
+        print(f"[info] --all-games: found {len(games)} games in {DATASET_DIR}",
+              flush=True)
+    else:
+        games = args.games if args.games is not None else DEFAULT_GAMES
+
+    for g in games:
+        out_path = args.out_dir / f"{g}.h5"
+        if args.skip_existing and out_path.exists():
+            print(f"[{g}] skip (exists: {out_path})", flush=True)
+            continue
         process_game(g, args.target_per_game, args.out_dir,
                      model_name, args.embed_batch, embedder,
-                     debug_print_texts=args.debug_print_texts)
+                     debug_print_texts=args.debug_print_texts,
+                     render_threads=render_threads)
     return 0
 
 

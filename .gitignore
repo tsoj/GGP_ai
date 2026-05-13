@@ -24,3 +24,6 @@ __pycache__/
 
 # uv / venv
 /.venv/
+
+# Local-only scripts (intentionally uncommitted)
+*.local.py

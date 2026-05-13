@@ -93,7 +93,10 @@ def parse_trial_file(path: pathlib.Path) -> TrialFile:
             moves=moves,
         ))
 
-    lud_path = pathlib.Path(header["PATH"]).expanduser()
+    raw = pathlib.Path(header["PATH"]).expanduser()
+    # Trial files written after the project-root patch store PATH= as a
+    # repo-relative path. Older ones (with absolute PATH=) still work.
+    lud_path = raw if raw.is_absolute() else (PROJECT_ROOT / raw)
     return TrialFile(
         path=path,
         lud_path=lud_path,
@@ -123,6 +126,7 @@ def render_positions(
     lud_path: pathlib.Path,
     tasks: list[tuple[int, TrialRecord, list[int]]],
     jvm_args: Iterable[str] = (),
+    threads: int | None = None,
 ) -> list[RenderedPosition]:
     """Render positions for a list of (trial_idx, trial, plies) tasks.
 
@@ -146,6 +150,8 @@ def render_positions(
         cmd = ["java", *jvm_args, "-cp", cp, "RenderTrials",
                "--lud", str(lud_path.resolve()),
                "--tasks", str(tasks_path)]
+        if threads is not None:
+            cmd += ["--threads", str(threads)]
         proc = subprocess.run(
             cmd, check=True, capture_output=True, text=False)
     finally:

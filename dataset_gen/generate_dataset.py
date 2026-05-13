@@ -129,6 +129,7 @@ def main() -> int:
             "--opening-max-depth", str(args.opening_max_depth),
             "--seed", str(args.seed),
             "--manifest", manifest_path,
+            "--project-root", str(PROJECT_ROOT),
         ]
         if args.threads is not None:
             cmd += ["--threads", str(args.threads)]

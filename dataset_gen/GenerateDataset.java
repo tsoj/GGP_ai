@@ -86,6 +86,7 @@ public class GenerateDataset
         int threads = Runtime.getRuntime().availableProcessors();
         boolean verbose = false;
         String manifestPath = null;
+        String projectRoot = null;
         final List<String> ludPaths = new ArrayList<>();
 
         for (int i = 0; i < args.length; i++)
@@ -106,6 +107,7 @@ public class GenerateDataset
                 case "--threads":              threads           = Integer.parseInt(args[++i]); break;
                 case "--verbose":              verbose           = true; break;
                 case "--manifest":             manifestPath      = args[++i]; break;
+                case "--project-root":         projectRoot       = args[++i]; break;
                 default:                       ludPaths.add(args[i]);
             }
         }
@@ -155,6 +157,7 @@ public class GenerateDataset
             final double fDrawishThreshold = drawishThreshold;
             final int fOpeningMaxDepth = openingMaxDepth;
             final long fBaseSeed = baseSeed;
+            final String fProjectRoot = projectRoot;
 
             for (final String ludPath : ludPaths)
             {
@@ -166,7 +169,7 @@ public class GenerateDataset
                         processGame(ludPath, fOutDir, failuresOut, log,
                             fNumGames, fNumPlayouts, thinkSeconds, fMoveLimit,
                             fMaxGameSeconds, fDrawishCheckAfter, fDrawishThreshold,
-                            fOpeningMaxDepth, fBaseSeed);
+                            fOpeningMaxDepth, fBaseSeed, fProjectRoot);
                     }
                     catch (final Throwable t)
                     {
@@ -205,7 +208,8 @@ public class GenerateDataset
         final int drawishCheckAfter,
         final double drawishThreshold,
         final int openingMaxDepth,
-        final long baseSeed)
+        final long baseSeed,
+        final String projectRoot)
     {
         final File ludFile = new File(ludPath);
         if (!ludFile.exists())
@@ -396,7 +400,7 @@ public class GenerateDataset
         final File trialsFile = new File(outDir, gameId + ".txt");
         try (PrintWriter w = new PrintWriter(new FileWriter(trialsFile)))
         {
-            w.println("PATH=" + ludFile.getAbsolutePath());
+            w.println("PATH=" + writablePath(ludFile, projectRoot));
             w.println("LUDII_VERSION=" + Constants.LUDEME_VERSION);
             w.println("NUM_PLAYERS=" + numPlayers);
             w.println("NUM_TRIALS=" + pendingRecords.size());
@@ -495,6 +499,26 @@ public class GenerateDataset
     {
         final File parent = f.getAbsoluteFile().getParentFile();
         if (parent != null) parent.mkdirs();
+    }
+
+    /**
+     * Return a project-root-relative path if the lud file lives under the
+     * given project root; otherwise fall back to the absolute path. Always
+     * uses '/' as separator so the trial file stays portable.
+     */
+    private static String writablePath(final File ludFile, final String projectRoot)
+    {
+        final java.nio.file.Path lud = ludFile.toPath().toAbsolutePath().normalize();
+        if (projectRoot != null)
+        {
+            final java.nio.file.Path root = new File(projectRoot).toPath()
+                .toAbsolutePath().normalize();
+            if (lud.startsWith(root))
+            {
+                return root.relativize(lud).toString().replace(java.io.File.separatorChar, '/');
+            }
+        }
+        return lud.toString();
     }
 
     private static String bytesToHex(final byte[] b)
