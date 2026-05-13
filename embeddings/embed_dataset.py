@@ -37,11 +37,22 @@ sys.path.insert(0, str(HERE))
 import render_trials as rt  # noqa: E402
 
 DEFAULT_GAMES = [
-    "game_001_fit1.000_seed_1",
-    "game_003_fit1.000_seed_1",
-    "game_014_fit1.000_seed_1",
-    "game_019_fit1.000_seed_1",
-    "game_052_fit1.000_seed_3",
+    # "game_001_fit1.000_seed_1",
+    # "game_003_fit1.000_seed_1",
+    # "game_014_fit1.000_seed_1",
+    # "game_019_fit1.000_seed_1",
+    # "game_052_fit1.000_seed_3",
+    "game_002_fit1.000_seed_1",
+    "game_016_fit1.000_seed_1",
+    "game_020_fit1.000_seed_1",
+    "game_021_fit1.000_seed_1",
+    "game_027_fit1.000_seed_2",
+    "game_045_fit1.000_seed_2",
+    "game_048_fit1.000_seed_3",
+    "game_064_fit1.000_ucb_ludeme_seed_1",
+    "game_069_fit1.000_ucb_ludeme_seed_2",
+    "game_080_fit1.000_ucb_ludeme_seed_3",
+    "game_089_fit1.000_ucb_ludeme_seed_3",
 ]
 DATASET_DIR = PROJECT_ROOT / "dataset"
 

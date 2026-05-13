@@ -13,8 +13,51 @@ dependencies = [
 #   uv sync --extra embed
 embed = [
     "vllm>=0.6.0",
-    "torch",
+    "torch>=2.5",
 ]
+# PyTorch backend for the training scripts — pick exactly one:
+#   uv sync --extra cpu    → CPU (works everywhere)
+#   uv sync --extra cuda   → CUDA 13.0 (NVIDIA GPUs)
+#   uv sync --extra rocm   → ROCm 7.2  (AMD GPUs, Linux only)
+cpu  = ["torch>=2.5"]
+cuda = ["torch>=2.5"]
+rocm = ["torch>=2.5", "pytorch-triton-rocm", "triton-rocm"]
 
 [tool.uv]
 package = false
+conflicts = [
+  [
+    { extra = "cpu" },
+    { extra = "cuda" },
+    { extra = "rocm" },
+    { extra = "embed" },
+  ],
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu",  extra = "cpu" },
+  { index = "pytorch-cuda", extra = "cuda" },
+  { index = "pytorch-rocm", extra = "rocm" },
+]
+pytorch-triton-rocm = [
+  { index = "pytorch-rocm", extra = "rocm" },
+]
+triton-rocm = [
+  { index = "pytorch-rocm", extra = "rocm" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-rocm"
+url = "https://download.pytorch.org/whl/rocm7.2"
+explicit = true

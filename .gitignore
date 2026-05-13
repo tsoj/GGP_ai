@@ -27,3 +27,5 @@ __pycache__/
 
 # Local-only scripts (intentionally uncommitted)
 *.local.py
+embeddings/out_all_games/
+training/out/
