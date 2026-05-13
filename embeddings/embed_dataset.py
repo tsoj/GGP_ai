@@ -113,6 +113,7 @@ def process_game(
     embedder,
     debug_print_texts: int = 0,
     render_threads: int | None = None,
+    prefix_lud: bool = False,
 ) -> pathlib.Path:
     trial_path = resolve_game_id(game_id)
     game_id = trial_path.stem  # canonical (in case user passed a short form)
@@ -153,6 +154,18 @@ def process_game(
 
     # Embed
     texts = [r.text for r in rendered]
+    if prefix_lud:
+        lud_text = tf.lud_path.read_text(encoding="utf-8", errors="replace")
+        prefix = (
+            "The following is the Ludii game description (.lud) defining the "
+            "rules of the game:\n\n"
+            "===== BEGIN GAME RULES =====\n"
+            f"{lud_text}\n"
+            "===== END GAME RULES =====\n\n"
+            "Below is a specific position from a played game under these "
+            "rules:\n\n"
+        )
+        texts = [prefix + t for t in texts]
     if debug_print_texts > 0:
         n_show = min(debug_print_texts, len(rendered))
         print(f"[{game_id}] --- debug: first {n_show} of {len(rendered)} "
@@ -162,7 +175,7 @@ def process_game(
             print(f"===== [{game_id}] idx={i}  trial={r.trial_idx}  "
                   f"ply={r.ply}  mover={r.mover}  terminal={r.terminal} =====",
                   flush=True)
-            print(r.text, flush=True)
+            print(texts[i], flush=True)
         print(f"[{game_id}] --- end debug texts ---", flush=True)
     print(f"[{game_id}] embedding {len(texts)} texts in batches of {embed_batch}...",
           flush=True)
@@ -298,6 +311,9 @@ def main() -> int:
     ap.add_argument("--render-threads", type=int, default=None,
                     help="JVM worker threads for trial replay. "
                          "Default: max(1, available_cores // 2).")
+    ap.add_argument("--prefix-lud", action="store_true",
+                    help="Prepend the game's .lud rules (with a short framing "
+                         "note) to every input text before embedding.")
     ap.add_argument("--debug-print-texts", type=int, default=0, metavar="N",
                     help="Print the first N rendered texts (verbatim) per game "
                          "before embedding. For inspecting what the model sees.")
@@ -330,7 +346,8 @@ def main() -> int:
         process_game(g, args.target_per_game, args.out_dir,
                      model_name, args.embed_batch, embedder,
                      debug_print_texts=args.debug_print_texts,
-                     render_threads=render_threads)
+                     render_threads=render_threads,
+                     prefix_lud=args.prefix_lud)
     return 0
 
 
