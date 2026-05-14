@@ -32,3 +32,5 @@ training/out/
 embeddings/out_old/
 training/out_all/
 training/out_all_split_game/
+training/out_100000/
+embeddings/out_100000/
